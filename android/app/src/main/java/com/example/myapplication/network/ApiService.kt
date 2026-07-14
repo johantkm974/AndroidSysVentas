@@ -43,6 +43,9 @@ interface ApiService {
     @GET("productos/{id}")
     suspend fun getProduct(@Path("id") id: Long): ProductoResponse
     
+    @GET("productos/categoria/{idCategoria}")
+    suspend fun listProductsByCategory(@Path("idCategoria") idCategoria: Long): List<ProductoResponse>
+
     @GET("productos/stock-bajo")
     suspend fun lowStockProducts(): List<ProductoResponse>
     
@@ -92,7 +95,7 @@ interface ApiService {
     @POST("pedidos/{id}/cancelar")
     suspend fun cancelOrder(@Path("id") id: Long): PedidoResponse
     
-    @PATCH("api/pedidos/{id}/estado/{estado}")
+    @PATCH("pedidos/{id}/estado/{estado}")
     suspend fun updateOrderStatus(@Path("id") id: Long, @Path("estado") estado: Long): PedidoResponse
     
     // Ventas
@@ -105,7 +108,7 @@ interface ApiService {
     @POST("ventas/procesar")
     suspend fun processSale(@Body req: VentaRequest): VentaResponse
     
-    @PATCH("api/ventas/{id}/anular")
+    @PATCH("ventas/{id}/anular")
     suspend fun cancelSale(@Path("id") id: Long): VentaResponse
     
     // Dashboard

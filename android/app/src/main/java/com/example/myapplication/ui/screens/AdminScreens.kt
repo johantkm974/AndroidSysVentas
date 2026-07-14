@@ -5,16 +5,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.myapplication.model.RegisterRequest
@@ -38,26 +39,68 @@ fun UserManagementScreen(viewModel: UserViewModel, navController: NavController)
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                )
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate(Screen.CreateUser.route) }) {
+            FloatingActionButton(
+                onClick = { navController.navigate(Screen.CreateUser.route) },
+                shape = RoundedCornerShape(16.dp)
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "Añadir Usuario")
             }
         }
     ) { padding ->
-        LazyColumn(modifier = Modifier.padding(padding)) {
+        LazyColumn(
+            modifier = Modifier.padding(padding),
+            contentPadding = PaddingValues(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             items(users) { user ->
-                ListItem(
-                    headlineContent = { Text("${user.nombres} ${user.apellidos}") },
-                    supportingContent = { 
-                        Column {
-                            Text(user.correo)
-                            Text("Roles: ${user.roles.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
-                    },
-                    trailingContent = {
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "${user.nombres} ${user.apellidos}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(user.correo, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                "Roles: ${user.roles.joinToString(", ")}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                         Row {
                             IconButton(onClick = { navController.navigate(Screen.EditUser.createRoute(user.idUsuario)) }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
@@ -67,7 +110,7 @@ fun UserManagementScreen(viewModel: UserViewModel, navController: NavController)
                             }
                         }
                     }
-                )
+                }
             }
         }
     }
@@ -83,7 +126,6 @@ fun CreateUserScreen(viewModel: UserViewModel, navController: NavController) {
     var password by remember { mutableStateOf("") }
     var telefono by remember { mutableStateOf("") }
     var direccion by remember { mutableStateOf("") }
-    
     val availableRoles by viewModel.availableRoles.collectAsState()
     val selectedRoles = remember { mutableStateListOf<Long>() }
 
@@ -97,7 +139,12 @@ fun CreateUserScreen(viewModel: UserViewModel, navController: NavController) {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                )
             )
         }
     ) { padding ->
@@ -107,61 +154,49 @@ fun CreateUserScreen(viewModel: UserViewModel, navController: NavController) {
                 .padding(padding)
                 .padding(16.dp)
                 .fillMaxSize()
-                .verticalScroll(scrollState)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedTextField(value = nombres, onValueChange = { nombres = it }, label = { Text("Nombres") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = apellidos, onValueChange = { apellidos = it }, label = { Text("Apellidos") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = dni, onValueChange = { dni = it }, label = { Text("DNI") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = correo, onValueChange = { correo = it }, label = { Text("Correo Electrónico") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Contraseña") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = telefono, onValueChange = { telefono = it }, label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección") }, modifier = Modifier.fillMaxWidth())
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Asignar Roles:", style = MaterialTheme.typography.titleMedium)
-            
+            OutlinedTextField(value = nombres, onValueChange = { nombres = it }, label = { Text("Nombres") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            OutlinedTextField(value = apellidos, onValueChange = { apellidos = it }, label = { Text("Apellidos") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            OutlinedTextField(value = dni, onValueChange = { dni = it }, label = { Text("DNI") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            OutlinedTextField(value = correo, onValueChange = { correo = it }, label = { Text("Correo Electrónico") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Contraseña") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            OutlinedTextField(value = telefono, onValueChange = { telefono = it }, label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            OutlinedTextField(value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            Text("Asignar Roles:", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             availableRoles.forEach { role ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            if (selectedRoles.contains(role.idRol)) {
-                                selectedRoles.remove(role.idRol)
-                            } else {
-                                selectedRoles.add(role.idRol)
-                            }
+                            if (selectedRoles.contains(role.idRol)) selectedRoles.remove(role.idRol)
+                            else selectedRoles.add(role.idRol)
                         }
-                        .padding(vertical = 4.dp)
+                        .padding(vertical = 2.dp)
                 ) {
-                    Checkbox(
-                        checked = selectedRoles.contains(role.idRol),
-                        onCheckedChange = null // Click handled by Row for better experience
-                    )
+                    Checkbox(checked = selectedRoles.contains(role.idRol), onCheckedChange = null)
                     Text(role.nombre, modifier = Modifier.padding(start = 8.dp))
                 }
             }
-            
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
                     val finalRoles = if (selectedRoles.isEmpty()) listOf(4L) else selectedRoles.toList()
                     val request = RegisterRequest(
-                        nombres = nombres,
-                        apellidos = apellidos,
-                        dni = dni,
-                        correo = correo,
-                        password = password,
-                        telefono = if (telefono.isBlank()) null else telefono,
-                        direccion = if (direccion.isBlank()) null else direccion,
-                        idRoles = finalRoles
+                        nombres = nombres, apellidos = apellidos, dni = dni, correo = correo,
+                        password = password, telefono = if (telefono.isBlank()) null else telefono,
+                        direccion = if (direccion.isBlank()) null else direccion, idRoles = finalRoles
                     )
                     viewModel.createUser(request)
                     navController.popBackStack()
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Crear Usuario")
+                Text("Crear Usuario", style = MaterialTheme.typography.labelLarge)
             }
         }
     }
@@ -176,7 +211,6 @@ fun EditUserScreen(id: Long, viewModel: UserViewModel, navController: NavControl
     var telefono by remember { mutableStateOf("") }
     var direccion by remember { mutableStateOf("") }
     var activo by remember { mutableStateOf(true) }
-    
     val availableRoles by viewModel.availableRoles.collectAsState()
     val selectedRoles = remember { mutableStateListOf<Long>() }
 
@@ -189,8 +223,6 @@ fun EditUserScreen(id: Long, viewModel: UserViewModel, navController: NavControl
             telefono = user.telefono ?: ""
             direccion = user.direccion ?: ""
             activo = user.activo
-            // Nota: Aquí se debería mapear los nombres de roles a IDs si el backend no envía IDs en UsuarioResponse
-            // Por simplicidad, asumimos que se gestionan por separado o el backend los resuelve
         }
     }
 
@@ -202,7 +234,12 @@ fun EditUserScreen(id: Long, viewModel: UserViewModel, navController: NavControl
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                )
             )
         }
     ) { padding ->
@@ -212,62 +249,47 @@ fun EditUserScreen(id: Long, viewModel: UserViewModel, navController: NavControl
                 .padding(padding)
                 .padding(16.dp)
                 .fillMaxSize()
-                .verticalScroll(scrollState)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedTextField(value = nombres, onValueChange = { nombres = it }, label = { Text("Nombres") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = apellidos, onValueChange = { apellidos = it }, label = { Text("Apellidos") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = dni, onValueChange = { dni = it }, label = { Text("DNI") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = telefono, onValueChange = { telefono = it }, label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección") }, modifier = Modifier.fillMaxWidth())
-            
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
+            OutlinedTextField(value = nombres, onValueChange = { nombres = it }, label = { Text("Nombres") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            OutlinedTextField(value = apellidos, onValueChange = { apellidos = it }, label = { Text("Apellidos") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            OutlinedTextField(value = dni, onValueChange = { dni = it }, label = { Text("DNI") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            OutlinedTextField(value = telefono, onValueChange = { telefono = it }, label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            OutlinedTextField(value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
                 Checkbox(checked = activo, onCheckedChange = { activo = it })
                 Text("Usuario Activo")
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Roles del Usuario:", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Roles del Usuario:", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             availableRoles.forEach { role ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            if (selectedRoles.contains(role.idRol)) {
-                                selectedRoles.remove(role.idRol)
-                            } else {
-                                selectedRoles.add(role.idRol)
-                            }
-                        }
-                        .padding(vertical = 4.dp)
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        if (selectedRoles.contains(role.idRol)) selectedRoles.remove(role.idRol)
+                        else selectedRoles.add(role.idRol)
+                    }.padding(vertical = 2.dp)
                 ) {
-                    Checkbox(
-                        checked = selectedRoles.contains(role.idRol),
-                        onCheckedChange = null // Click handled by Row for better experience
-                    )
+                    Checkbox(checked = selectedRoles.contains(role.idRol), onCheckedChange = null)
                     Text(role.nombre, modifier = Modifier.padding(start = 8.dp))
                 }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
                     val finalRoles = if (selectedRoles.isEmpty()) listOf(4L) else selectedRoles.toList()
                     val request = UpdateUserRequest(
-                        nombres = nombres,
-                        apellidos = apellidos,
-                        dni = dni,
-                        telefono = telefono,
-                        direccion = direccion,
-                        activo = activo,
-                        idRoles = finalRoles
+                        nombres = nombres, apellidos = apellidos, dni = dni,
+                        telefono = telefono, direccion = direccion, activo = activo, idRoles = finalRoles
                     )
                     viewModel.updateUser(id, request)
                     navController.popBackStack()
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Guardar Cambios")
+                Text("Guardar Cambios", style = MaterialTheme.typography.labelLarge)
             }
         }
     }
@@ -281,24 +303,97 @@ fun AdminDashboardScreen(viewModel: DashboardViewModel) {
     LaunchedEffect(Unit) { viewModel.loadDashboard() }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Dashboard Admin") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Dashboard Administrador") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).padding(16.dp)) {
-            data?.resumen?.let { resumen ->
-                DashboardCard("Total Ventas", "S/ ${resumen.ingresosDelMes}")
-                DashboardCard("Pedidos Pendientes", "${resumen.totalPedidosPendientes}")
-                DashboardCard("Total Usuarios", "${resumen.totalUsuarios}")
+        if (data == null) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            val resumen = data!!.resumen
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .padding(16.dp)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                DashboardCard(icon = Icons.Default.TrendingUp, title = "Ingresos del Mes", value = "S/ ${resumen.ingresosDelMes}", color = MaterialTheme.colorScheme.primary)
+                DashboardCard(icon = Icons.Default.ShoppingCart, title = "Ventas del Mes", value = "${resumen.totalVentasDelMes}", color = MaterialTheme.colorScheme.primary)
+                DashboardCard(icon = Icons.Default.PendingActions, title = "Pedidos Pendientes", value = "${resumen.totalPedidosPendientes}", color = MaterialTheme.colorScheme.tertiary)
+                DashboardCard(icon = Icons.Default.LocalShipping, title = "Envíos Pendientes", value = "${resumen.totalEnviosPendientes}", color = Color(0xFFFFA000))
+                DashboardCard(icon = Icons.Default.Inventory, title = "Total Productos", value = "${resumen.totalProductos}", color = MaterialTheme.colorScheme.secondary)
+                DashboardCard(icon = Icons.Default.People, title = "Total Usuarios", value = "${resumen.totalUsuarios}", color = MaterialTheme.colorScheme.secondary)
+
+                if (data!!.productosStockBajo.isNotEmpty()) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    Text("Productos con Stock Bajo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    data!!.productosStockBajo.forEach { prod ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(prod.nombre, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                    Text("Stock: ${prod.stock} (Mín: ${prod.stockMinimo})", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun DashboardCard(title: String, value: String) {
-    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.labelLarge)
-            Text(value, style = MaterialTheme.typography.headlineMedium)
+fun DashboardCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    value: String,
+    color: androidx.compose.ui.graphics.Color
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = color.copy(alpha = 0.12f),
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(28.dp))
+                }
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(title, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = color)
+            }
         }
     }
 }

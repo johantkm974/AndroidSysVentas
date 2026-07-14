@@ -34,6 +34,11 @@ public class ProductoController {
         return ResponseEntity.ok(productoService.obtenerPorCodigo(codigo));
     }
 
+    @GetMapping("/categoria/{idCategoria}")
+    public ResponseEntity<List<ProductoResponse>> listarPorCategoria(@PathVariable Long idCategoria) {
+        return ResponseEntity.ok(productoService.buscarPorCategoria(idCategoria));
+    }
+
     @GetMapping("/stock-bajo")
     @PreAuthorize("hasAnyRole('ADMIN', 'ALMACENERO')")
     public ResponseEntity<List<ProductoResponse>> stockBajo() {

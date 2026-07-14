@@ -14,6 +14,24 @@ class ProductRepository(private val apiService: ApiService) {
         }
     }
 
+    suspend fun listByCategory(idCategoria: Long): Result<List<ProductoResponse>> {
+        return try {
+            val response = apiService.listProductsByCategory(idCategoria)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun listCategories(): Result<List<com.example.myapplication.model.Categoria>> {
+        return try {
+            val response = apiService.listCategorias()
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getProductById(id: Long): Result<ProductoResponse> {
         return try {
             val response = apiService.getProduct(id)

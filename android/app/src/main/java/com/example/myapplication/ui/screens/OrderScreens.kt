@@ -3,13 +3,18 @@ package com.example.myapplication.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.myapplication.model.PedidoResponse
@@ -32,18 +37,43 @@ fun OrderListScreen(viewModel: OrderViewModel, navController: NavController, isA
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                )
             )
         }
     ) { padding ->
-        LazyColumn(modifier = Modifier.padding(padding)) {
-            items(orders) { order ->
-                OrderListItem(
-                    order = order,
-                    isAdminOrSeller = isAdminOrSeller,
-                    onStatusChange = { newStatus -> viewModel.updateStatus(order.idPedido, newStatus, isAdminOrSeller) },
-                    onCancel = { viewModel.cancelOrder(order.idPedido) }
+        if (orders.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "No hay pedidos disponibles",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.padding(padding),
+                contentPadding = PaddingValues(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(orders) { order ->
+                    OrderListItem(
+                        order = order,
+                        isAdminOrSeller = isAdminOrSeller,
+                        onStatusChange = { newStatus -> viewModel.updateStatus(order.idPedido, newStatus, isAdminOrSeller) },
+                        onConfirm = { viewModel.processSaleAndConfirm(order.idPedido) },
+                        onCancel = { viewModel.cancelOrder(order.idPedido) }
+                    )
+                }
             }
         }
     }
@@ -54,45 +84,123 @@ fun OrderListItem(
     order: PedidoResponse,
     isAdminOrSeller: Boolean,
     onStatusChange: (Long) -> Unit,
+    onConfirm: () -> Unit,
     onCancel: () -> Unit
 ) {
     val statusColor = when (order.estado) {
-        "PENDIENTE" -> Color(0xFFFFC107)
-        "CONFIRMADO" -> Color(0xFF2196F3)
-        "ENTREGADO" -> Color(0xFF4CAF50)
-        "CANCELADO" -> Color(0xFFF44336)
+        "PENDIENTE" -> Color(0xFFFFA000)
+        "CONFIRMADO" -> Color(0xFF1976D2)
+        "ENTREGADO" -> Color(0xFF388E3C)
+        "CANCELADO" -> Color(0xFFD32F2F)
         else -> Color.Gray
     }
 
-    Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Pedido: ${order.numeroPedido}", style = MaterialTheme.typography.titleMedium)
-                Text(order.estado, color = statusColor, style = MaterialTheme.typography.labelLarge)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Pedido: ${order.numeroPedido}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = statusColor.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        order.estado,
+                        color = statusColor,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
             }
-            Text("Cliente: ${order.cliente}", style = MaterialTheme.typography.bodySmall)
-            Text("Total: S/ ${order.total}", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
-            
-            if (order.detalles != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Cliente: ${order.cliente}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Total: S/ ${order.total}",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+
+            if (order.detalles != null && order.detalles.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Detalles:",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium
+                )
                 order.detalles.forEach { detail ->
-                    Text("• ${detail.producto} x${detail.cantidad}", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "• ${detail.producto} x${detail.cantidad} - S/ ${detail.subtotal}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             if (isAdminOrSeller && order.estado != "CANCELADO" && order.estado != "ENTREGADO") {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = { onStatusChange(2) }) { Text("Confirmar") }
-                    TextButton(onClick = { onStatusChange(5) }) { Text("Entregar") }
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (order.estado == "PENDIENTE") {
+                        FilledTonalButton(
+                            onClick = onConfirm,
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Confirmar")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    if (order.estado == "CONFIRMADO") {
+                        FilledTonalButton(
+                            onClick = { onStatusChange(5) },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            )
+                        ) {
+                            Icon(Icons.Default.LocalShipping, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Entregar")
+                        }
+                    }
                 }
             } else if (!isAdminOrSeller && order.estado == "PENDIENTE") {
-                Button(
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
                     onClick = onCancel,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.align(Alignment.End)
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
+                    Icon(Icons.Default.Cancel, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Cancelar Pedido")
                 }
             }

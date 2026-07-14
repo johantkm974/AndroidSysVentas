@@ -27,6 +27,8 @@ public class PedidoServiceImpl implements PedidoService {
     private final ProductoRepository productoRepository;
     private final UsuarioRepository usuarioRepository;
     private final EstadoPedidoRepository estadoPedidoRepository;
+    private final VentaRepository ventaRepository;
+    private final EstadoVentaRepository estadoVentaRepository;
 
     @Override
     public List<PedidoResponse> listarTodos() {
@@ -112,6 +114,14 @@ public class PedidoServiceImpl implements PedidoService {
         EstadoPedido estado = estadoPedidoRepository.findById(idEstadoPedido)
                 .orElseThrow(() -> new ResourceNotFoundException("Estado no encontrado: " + idEstadoPedido));
         pedido.setEstadoPedido(estado);
+
+        if ("ENTREGADO".equals(estado.getNombre()) && pedido.getVenta() != null) {
+            EstadoVenta pagada = estadoVentaRepository.findByNombre("PAGADA")
+                    .orElseThrow(() -> new RuntimeException("Estado PAGADA no configurado"));
+            pedido.getVenta().setEstadoVenta(pagada);
+            ventaRepository.save(pedido.getVenta());
+        }
+
         return toResponse(pedidoRepository.save(pedido));
     }
 

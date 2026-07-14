@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
                     val loginViewModel: LoginViewModel = viewModel(factory = createFactory { LoginViewModel(authRepository, sessionManager) })
                     val userViewModel: UserViewModel = viewModel(factory = createFactory { UserViewModel(userRepository) })
                     val productViewModel: ProductViewModel = viewModel(factory = createFactory { ProductViewModel(productRepository) })
-                    val orderViewModel: OrderViewModel = viewModel(factory = createFactory { OrderViewModel(orderRepository) })
+                    val orderViewModel: OrderViewModel = viewModel(factory = createFactory { OrderViewModel(orderRepository, ventaRepository) })
                     val dashboardViewModel: DashboardViewModel = viewModel(factory = createFactory { DashboardViewModel(apiService) })
                     val categoriaViewModel: CategoriaViewModel = viewModel(factory = createFactory { CategoriaViewModel(apiService) })
                     val marcaViewModel: MarcaViewModel = viewModel(factory = createFactory { MarcaViewModel(apiService) })
@@ -67,6 +67,7 @@ class MainActivity : ComponentActivity() {
                         cartViewModel = cartViewModel,
                         ventaViewModel = ventaViewModel,
                         onLogout = {
+                            loginViewModel.resetState()
                             MainScope().launch {
                                 sessionManager.clearSession()
                                 navController.navigate(Screen.Login.route) {

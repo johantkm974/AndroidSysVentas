@@ -24,6 +24,10 @@ class LoginViewModel(
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState: StateFlow<LoginUiState> = _uiState
 
+    fun resetState() {
+        _uiState.value = LoginUiState.Idle
+    }
+
     fun login(correo: String, pass: String) {
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading

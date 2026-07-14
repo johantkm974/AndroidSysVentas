@@ -63,7 +63,10 @@ class UserViewModel(private val repository: UserRepository) : ViewModel() {
 }
 
 // --- Order Management ViewModel ---
-class OrderViewModel(private val repository: OrderRepository) : ViewModel() {
+class OrderViewModel(
+    private val repository: OrderRepository,
+    private val ventaRepository: VentaRepository
+) : ViewModel() {
     private val _orders = MutableStateFlow<List<PedidoResponse>>(emptyList())
     val orders: StateFlow<List<PedidoResponse>> = _orders
 
@@ -83,6 +86,23 @@ class OrderViewModel(private val repository: OrderRepository) : ViewModel() {
         viewModelScope.launch {
             repository.updateOrderStatus(id, idEstado).onSuccess {
                 if (isAdmin) loadAllOrders() else loadMyOrders()
+            }
+        }
+    }
+
+    fun confirmOrder(id: Long, isAdmin: Boolean) {
+        viewModelScope.launch {
+            val result = repository.updateOrderStatus(id, 2)
+            if (result.isSuccess) {
+                repository.listAllOrders().onSuccess { _orders.value = it }
+            }
+        }
+    }
+
+    fun processSaleAndConfirm(id: Long) {
+        viewModelScope.launch {
+            ventaRepository.processSale(VentaRequest(id, 5)).onSuccess {
+                loadAllOrders()
             }
         }
     }

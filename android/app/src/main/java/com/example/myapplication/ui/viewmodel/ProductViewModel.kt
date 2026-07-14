@@ -2,6 +2,7 @@ package com.example.myapplication.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.myapplication.model.Categoria
 import com.example.myapplication.model.ProductoRequest
 import com.example.myapplication.model.ProductoResponse
 import com.example.myapplication.repository.ProductRepository
@@ -20,44 +21,62 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
     private val _uiState = MutableStateFlow<ProductUiState>(ProductUiState.Loading)
     val uiState: StateFlow<ProductUiState> = _uiState
 
-    init {
-        loadProducts()
+    private val _categories = MutableStateFlow<List<Categoria>>(emptyList())
+    val categories: StateFlow<List<Categoria>> = _categories
+
+    private val _selectedCategoryId = MutableStateFlow<Long?>(null)
+    val selectedCategoryId: StateFlow<Long?> = _selectedCategoryId
+
+    fun loadCategories() {
+        viewModelScope.launch {
+            repository.listCategories().onSuccess { _categories.value = it }
+        }
     }
 
     fun loadProducts() {
+        _selectedCategoryId.value = null
+        viewModelScope.launch { loadAllProducts() }
+    }
+
+    fun loadProductsByCategory(categoryId: Long?) {
+        _selectedCategoryId.value = categoryId
         viewModelScope.launch {
             _uiState.value = ProductUiState.Loading
-            repository.listProducts()
-                .onSuccess { products ->
-                    _uiState.value = ProductUiState.Success(products)
-                }
-                .onFailure { error ->
-                    _uiState.value = ProductUiState.Error(error.message ?: "Error al cargar productos")
-                }
+            if (categoryId == null) {
+                loadAllProducts()
+            } else {
+                repository.listByCategory(categoryId)
+                    .onSuccess { products -> _uiState.value = ProductUiState.Success(products) }
+                    .onFailure { error -> _uiState.value = ProductUiState.Error(error.message ?: "Error al cargar productos") }
+            }
         }
+    }
+
+    private suspend fun loadAllProducts() {
+        _uiState.value = ProductUiState.Loading
+        repository.listProducts()
+            .onSuccess { products -> _uiState.value = ProductUiState.Success(products) }
+            .onFailure { error -> _uiState.value = ProductUiState.Error(error.message ?: "Error al cargar productos") }
     }
 
     fun deleteProduct(id: Long) {
         viewModelScope.launch {
             repository.deleteProduct(id)
-                .onSuccess { loadProducts() }
-                .onFailure { /* Manejar error */ }
+                .onSuccess { loadAllProducts() }
         }
     }
 
     fun createProduct(request: ProductoRequest) {
         viewModelScope.launch {
             repository.createProduct(request)
-                .onSuccess { loadProducts() }
-                .onFailure { /* Manejar error */ }
+                .onSuccess { loadAllProducts() }
         }
     }
 
     fun updateProduct(id: Long, request: ProductoRequest) {
         viewModelScope.launch {
             repository.updateProduct(id, request)
-                .onSuccess { loadProducts() }
-                .onFailure { /* Manejar error */ }
+                .onSuccess { loadAllProducts() }
         }
     }
 
