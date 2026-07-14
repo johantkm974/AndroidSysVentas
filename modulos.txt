@@ -1,0 +1,338 @@
+🔐 MÓDULO 1: USUARIOS
+
+Gestiona el acceso al sistema, clientes y trabajadores (administrador, vendedor, almacenero).
+
+USUARIOS
+│
+├── usuarios
+├── credenciales
+├── roles
+└── usuarios_roles
+📦 MÓDULO 2: INVENTARIO
+
+Gestiona los componentes electrónicos, categorías, marcas, proveedores y control del stock.
+
+INVENTARIO
+│
+├── categorias
+├── marcas
+├── proveedores
+├── productos
+└── movimientos_inventario
+🚚 MÓDULO 3: PEDIDOS Y ENVÍOS
+
+Gestiona la compra del cliente, preparación del pedido y entrega del producto.
+
+PEDIDOS Y ENVÍOS
+│
+├── pedidos
+├── detalle_pedido
+├── estados_pedido
+├── envios
+├── seguimiento_envio
+└── estados_envio
+💰 MÓDULO 4: VENTAS
+
+Gestiona la venta generada después de confirmar el pedido y el método de pago.
+
+VENTAS
+│
+├── ventas
+├── detalle_venta
+├── metodos_pago
+└── estados_venta
+📌 Resumen general
+SISTEMA DE VENTAS DE COMPONENTES ELECTRÓNICOS
+
+│
+├── 🔐 USUARIOS
+│      ├ usuarios
+│      ├ credenciales
+│      ├ roles
+│      └ usuarios_roles
+│
+├── 📦 INVENTARIO
+│      ├ categorias
+│      ├ marcas
+│      ├ proveedores
+│      ├ productos
+│      └ movimientos_inventario
+│
+├── 🚚 PEDIDOS Y ENVÍOS
+│      ├ pedidos
+│      ├ detalle_pedido
+│      ├ estados_pedido
+│      ├ envios
+│      ├ seguimiento_envio
+│      └ estados_envio
+│
+└── 💰 VENTAS
+       ├ ventas
+       ├ detalle_venta
+       ├ metodos_pago
+       └ estados_venta
+
+Total:
+
+4 módulos principales
+19 entidades/tablas
+
+Esta estructura ya está alineada con tu idea:
+
+Cliente se registra como usuario.
+Cliente compra productos.
+Se genera un pedido.
+Se procesa una venta simulada.
+Se descuenta stock.
+Se realiza envío.
+Administrador tiene dashboard.
+JWT controla los accesos.
+
+Para un proyecto con Spring Boot + Java 21 + Maven + JWT + MySQL, esta separación está correc
+
+Login con JWT.
+Roles.
+Compra del cliente.
+Control de stock.
+Registro de venta.
+Seguimiento del pedido.
+Dashboard con estadísticas.
+
+
+
+🔐 MÓDULO: Usuarios
+
+Gestiona clientes y empleados del sistema.
+
+Tabla: usuarios
+Campo	Tipo
+id_usuario	BIGINT
+nombres	VARCHAR(100)
+apellidos	VARCHAR(100)
+dni	VARCHAR(20)
+telefono	VARCHAR(20)
+direccion	VARCHAR(255)
+activo	BOOLEAN
+created_at	TIMESTAMP
+updated_at	TIMESTAMP
+Tabla: credenciales
+Campo	Tipo
+id_credencial	BIGINT
+id_usuario	BIGINT FK
+correo	VARCHAR(150)
+password	VARCHAR(255)
+ultimo_login	TIMESTAMP
+activo	BOOLEAN
+created_at	TIMESTAMP
+updated_at	TIMESTAMP
+Tabla: roles
+Campo	Tipo
+id_rol	BIGINT
+nombre	VARCHAR(50)
+descripcion	VARCHAR(255)
+activo	BOOLEAN
+created_at	TIMESTAMP
+updated_at	TIMESTAMP
+
+Roles iniciales:
+
+ADMIN
+VENDEDOR
+ALMACENERO
+CLIENTE
+Tabla: usuarios_roles
+Campo	Tipo
+id_usuario_rol	BIGINT
+id_usuario	BIGINT FK
+id_rol	BIGINT FK
+created_at	TIMESTAMP
+📦 MÓDULO: Inventario
+
+Gestiona componentes electrónicos y stock.
+
+Tabla: categorias
+Campo	Tipo
+id_categoria	BIGINT
+nombre	VARCHAR(100)
+descripcion	VARCHAR(255)
+activo	BOOLEAN
+created_at	TIMESTAMP
+updated_at	TIMESTAMP
+Tabla: marcas
+Campo	Tipo
+id_marca	BIGINT
+nombre	VARCHAR(100)
+descripcion	VARCHAR(255)
+activo	BOOLEAN
+created_at	TIMESTAMP
+updated_at	TIMESTAMP
+Tabla: proveedores
+Campo	Tipo
+id_proveedor	BIGINT
+razon_social	VARCHAR(150)
+ruc	VARCHAR(11)
+telefono	VARCHAR(20)
+correo	VARCHAR(150)
+direccion	VARCHAR(255)
+activo	BOOLEAN
+created_at	TIMESTAMP
+updated_at	TIMESTAMP
+Tabla: productos
+Campo	Tipo
+id_producto	BIGINT
+codigo	VARCHAR(50)
+nombre	VARCHAR(150)
+descripcion	TEXT
+precio_compra	DECIMAL(10,2)
+precio_venta	DECIMAL(10,2)
+stock	INT
+stock_minimo	INT
+imagen	VARCHAR(255)
+id_categoria	BIGINT FK
+id_marca	BIGINT FK
+id_proveedor	BIGINT FK
+activo	BOOLEAN
+created_at	TIMESTAMP
+updated_at	TIMESTAMP
+Tabla: movimientos_inventario
+Campo	Tipo
+id_movimiento	BIGINT
+id_producto	BIGINT FK
+id_usuario	BIGINT FK
+tipo_movimiento	ENUM
+cantidad	INT
+stock_anterior	INT
+stock_actual	INT
+descripcion	VARCHAR(255)
+created_at	TIMESTAMP
+
+Tipos:
+
+ENTRADA
+SALIDA
+AJUSTE
+💰 MÓDULO: Ventas
+
+Registra la compra confirmada.
+
+Tabla: ventas
+Campo	Tipo
+id_venta	BIGINT
+numero_venta	VARCHAR(30)
+id_usuario_cliente	BIGINT FK
+id_usuario_vendedor	BIGINT FK
+id_metodo_pago	BIGINT FK
+subtotal	DECIMAL(10,2)
+igv	DECIMAL(10,2)
+total	DECIMAL(10,2)
+id_estado_venta	BIGINT FK
+created_at	TIMESTAMP
+Tabla: detalle_venta
+Campo	Tipo
+id_detalle	BIGINT
+id_venta	BIGINT FK
+id_producto	BIGINT FK
+cantidad	INT
+precio_unitario	DECIMAL(10,2)
+subtotal	DECIMAL(10,2)
+Tabla: metodos_pago
+Campo	Tipo
+id_metodo_pago	BIGINT
+nombre	VARCHAR(50)
+descripcion	VARCHAR(255)
+activo	BOOLEAN
+
+Ejemplo:
+
+YAPE
+PLIN
+TARJETA
+EFECTIVO
+SIMULADO
+Tabla: estados_venta
+Campo	Tipo
+id_estado_venta	BIGINT
+nombre	VARCHAR(50)
+descripcion	VARCHAR(255)
+
+Ejemplo:
+
+PENDIENTE
+PAGADA
+ANULADA
+🚚 MÓDULO: Pedidos y Envíos
+
+Gestiona la compra y entrega.
+
+Tabla: pedidos
+Campo	Tipo
+id_pedido	BIGINT
+numero_pedido	VARCHAR(30)
+id_usuario_cliente	BIGINT FK
+id_estado_pedido	BIGINT FK
+total	DECIMAL(10,2)
+observacion	VARCHAR(255)
+created_at	TIMESTAMP
+updated_at	TIMESTAMP
+Tabla: detalle_pedido
+Campo	Tipo
+id_detalle_pedido	BIGINT
+id_pedido	BIGINT FK
+id_producto	BIGINT FK
+cantidad	INT
+precio_unitario	DECIMAL(10,2)
+subtotal	DECIMAL(10,2)
+Tabla: estados_pedido
+Campo	Tipo
+id_estado_pedido	BIGINT
+nombre	VARCHAR(50)
+descripcion	VARCHAR(255)
+
+Estados:
+
+PENDIENTE
+CONFIRMADO
+PREPARANDO
+ENVIADO
+ENTREGADO
+CANCELADO
+Tabla: envios
+Campo	Tipo
+id_envio	BIGINT
+id_pedido	BIGINT FK
+direccion	VARCHAR(255)
+distrito	VARCHAR(100)
+referencia	VARCHAR(255)
+id_estado_envio	BIGINT FK
+fecha_envio	TIMESTAMP
+fecha_entrega	TIMESTAMP
+created_at	TIMESTAMP
+updated_at	TIMESTAMP
+Tabla: seguimiento_envio
+Campo	Tipo
+id_seguimiento	BIGINT
+id_envio	BIGINT FK
+id_estado_envio	BIGINT FK
+observacion	VARCHAR(255)
+created_at	TIMESTAMP
+Tabla: estados_envio
+Campo	Tipo
+id_estado_envio	BIGINT
+nombre	VARCHAR(50)
+descripcion	VARCHAR(255)
+
+Estados:
+
+PENDIENTE
+EN_PREPARACION
+EN_RUTA
+ENTREGADO
+CANCELADO
+Resumen final
+Módulo	Entidades
+Usuarios	4 tablas
+Inventario	5 tablas
+Ventas	4 tablas
+Pedidos y Envíos	6 tablas
+
+Total: 19 tablas
