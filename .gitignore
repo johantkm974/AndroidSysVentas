@@ -1,0 +1,57 @@
+# =========================
+# 1. Android Studio y Gradle
+# =========================
+# Carpetas de construcción generadas automáticamente
+build/
+*/build/
+app/build/
+
+# Archivos de configuración local (contienen rutas específicas de tu PC)
+local.properties
+
+# Caché de Gradle
+.gradle/
+*/.gradle/
+
+# Archivos de firma (keystores locales)
+*.jks
+*.keystore
+
+# =========================
+# 2. Java (Spring Boot, Maven, etc.)
+# =========================
+# Archivos compilados de Java
+*.class
+
+# Carpeta de salida de Maven (si usas Maven en tu proyecto Java)
+target/
+
+# Archivos de registro / Logs
+*.log
+
+# =========================
+# 3. Entornos de Desarrollo (IDEs)
+# =========================
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+
+# Visual Studio Code
+.vscode/
+
+# Eclipse (por si acaso usas Eclipse para la parte de Java)
+.classpath
+.project
+.settings/
+
+# =========================
+# 4. Archivos del Sistema Operativo
+# =========================
+# Windows
+Thumbs.db
+ehthumbs.db
+$RECYCLE.BIN/
+
+# macOS (por si colaboras con alguien que use Mac)
+.DS_Store
