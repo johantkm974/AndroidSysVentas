@@ -64,6 +64,9 @@ interface ApiService {
     
     @POST("categorias")
     suspend fun createCategoria(@Body req: Categoria): Categoria
+
+    @DELETE("categorias/{id}")
+    suspend fun deleteCategoria(@Path("id") id: Long)
     
     // Marcas
     @GET("marcas")
@@ -71,6 +74,9 @@ interface ApiService {
     
     @POST("marcas")
     suspend fun createMarca(@Body req: Marca): Marca
+
+    @DELETE("marcas/{id}")
+    suspend fun deleteMarca(@Path("id") id: Long)
     
     // Proveedores
     @GET("proveedores")
@@ -78,6 +84,9 @@ interface ApiService {
     
     @POST("proveedores")
     suspend fun createProveedor(@Body req: Proveedor): Proveedor
+
+    @DELETE("proveedores/{id}")
+    suspend fun deleteProveedor(@Path("id") id: Long)
     
     // Pedidos
     @GET("pedidos")

@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.screens
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,8 +20,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.myapplication.model.Categoria
+import com.example.myapplication.model.Marca
 import com.example.myapplication.model.ProductoRequest
 import com.example.myapplication.model.ProductoResponse
+import com.example.myapplication.model.Proveedor
 import com.example.myapplication.navigation.Screen
 import com.example.myapplication.ui.viewmodel.ProductUiState
 import com.example.myapplication.ui.viewmodel.ProductViewModel
@@ -31,8 +35,13 @@ fun InventoryManagementScreen(
     viewModel: ProductViewModel,
     navController: NavController
 ) {
-    LaunchedEffect(Unit) { viewModel.loadProducts() }
+    LaunchedEffect(Unit) {
+        viewModel.loadProducts()
+        viewModel.loadCategories()
+    }
     val uiState by viewModel.uiState.collectAsState()
+    val categories by viewModel.categories.collectAsState()
+    val selectedCategoryId by viewModel.selectedCategoryId.collectAsState()
 
     Scaffold(
         topBar = {
@@ -59,40 +68,61 @@ fun InventoryManagementScreen(
             }
         }
     ) { padding ->
-        when (uiState) {
-            is ProductUiState.Loading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+        Column(modifier = Modifier.padding(padding)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = selectedCategoryId == null,
+                    onClick = { viewModel.loadProducts() },
+                    label = { Text("Todas") }
+                )
+                categories.forEach { cat ->
+                    FilterChip(
+                        selected = selectedCategoryId == cat.idCategoria,
+                        onClick = { viewModel.loadProductsByCategory(cat.idCategoria) },
+                        label = { Text(cat.nombre) }
+                    )
                 }
             }
-            is ProductUiState.Success -> {
-                val products = (uiState as ProductUiState.Success).products
-                LazyColumn(
-                    modifier = Modifier.padding(padding),
-                    contentPadding = PaddingValues(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(products) { product ->
-                        InventoryProductItem(
-                            product = product,
-                            onDelete = { viewModel.deleteProduct(product.idProducto) },
-                            onEdit = { navController.navigate(Screen.EditProduct.createRoute(product.idProducto)) }
-                        )
+            when (uiState) {
+                is ProductUiState.Loading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
                     }
                 }
-            }
-            is ProductUiState.Error -> {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        (uiState as ProductUiState.Error).message,
-                        color = MaterialTheme.colorScheme.error
-                    )
+                is ProductUiState.Success -> {
+                    val products = (uiState as ProductUiState.Success).products
+                    LazyColumn(
+                        contentPadding = PaddingValues(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(products) { product ->
+                            InventoryProductItem(
+                                product = product,
+                                onDelete = { viewModel.deleteProduct(product.idProducto) },
+                                onEdit = { navController.navigate(Screen.EditProduct.createRoute(product.idProducto)) }
+                            )
+                        }
+                    }
+                }
+                is ProductUiState.Error -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            (uiState as ProductUiState.Error).message,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
         }
@@ -164,6 +194,22 @@ fun AddProductScreen(
     var stockMinimo by remember { mutableStateOf("") }
     var imagenUrl by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
+    var selectedCategoria by remember { mutableStateOf<Categoria?>(null) }
+    var selectedMarca by remember { mutableStateOf<Marca?>(null) }
+    var selectedProveedor by remember { mutableStateOf<Proveedor?>(null) }
+    var categoriaExpanded by remember { mutableStateOf(false) }
+    var marcaExpanded by remember { mutableStateOf(false) }
+    var proveedorExpanded by remember { mutableStateOf(false) }
+
+    val categories by viewModel.categories.collectAsState()
+    val marcas by viewModel.marcas.collectAsState()
+    val proveedores by viewModel.proveedores.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadCategories()
+        viewModel.loadMarcas()
+        viewModel.loadProveedores()
+    }
 
     Scaffold(
         topBar = {
@@ -199,6 +245,76 @@ fun AddProductScreen(
             OutlinedTextField(value = stock, onValueChange = { stock = it }, label = { Text("Stock") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
             OutlinedTextField(value = stockMinimo, onValueChange = { stockMinimo = it }, label = { Text("Stock Mínimo") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
             OutlinedTextField(value = imagenUrl, onValueChange = { imagenUrl = it }, label = { Text("URL Imagen") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+
+            ExposedDropdownMenuBox(
+                expanded = categoriaExpanded,
+                onExpandedChange = { categoriaExpanded = !categoriaExpanded }
+            ) {
+                OutlinedTextField(
+                    value = selectedCategoria?.nombre ?: "Seleccionar categoría",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Categoría") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoriaExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                ExposedDropdownMenu(expanded = categoriaExpanded, onDismissRequest = { categoriaExpanded = false }) {
+                    categories.forEach { cat ->
+                        DropdownMenuItem(
+                            text = { Text(cat.nombre) },
+                            onClick = { selectedCategoria = cat; categoriaExpanded = false }
+                        )
+                    }
+                }
+            }
+
+            ExposedDropdownMenuBox(
+                expanded = marcaExpanded,
+                onExpandedChange = { marcaExpanded = !marcaExpanded }
+            ) {
+                OutlinedTextField(
+                    value = selectedMarca?.nombre ?: "Seleccionar marca",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Marca") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = marcaExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                ExposedDropdownMenu(expanded = marcaExpanded, onDismissRequest = { marcaExpanded = false }) {
+                    marcas.forEach { marca ->
+                        DropdownMenuItem(
+                            text = { Text(marca.nombre) },
+                            onClick = { selectedMarca = marca; marcaExpanded = false }
+                        )
+                    }
+                }
+            }
+
+            ExposedDropdownMenuBox(
+                expanded = proveedorExpanded,
+                onExpandedChange = { proveedorExpanded = !proveedorExpanded }
+            ) {
+                OutlinedTextField(
+                    value = selectedProveedor?.razonSocial ?: "Seleccionar proveedor",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Proveedor") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = proveedorExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                ExposedDropdownMenu(expanded = proveedorExpanded, onDismissRequest = { proveedorExpanded = false }) {
+                    proveedores.forEach { prov ->
+                        DropdownMenuItem(
+                            text = { Text(prov.razonSocial) },
+                            onClick = { selectedProveedor = prov; proveedorExpanded = false }
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
@@ -211,9 +327,9 @@ fun AddProductScreen(
                         stock = stock.toIntOrNull() ?: 0,
                         stockMinimo = stockMinimo.toIntOrNull() ?: 0,
                         imagen = if (imagenUrl.isBlank()) null else imagenUrl,
-                        idCategoria = 1,
-                        idMarca = 1,
-                        idProveedor = 1
+                        idCategoria = selectedCategoria?.idCategoria ?: 1,
+                        idMarca = selectedMarca?.idMarca ?: 1,
+                        idProveedor = selectedProveedor?.idProveedor ?: 1
                     )
                     viewModel.createProduct(request)
                     navController.popBackStack()
@@ -241,10 +357,23 @@ fun EditProductScreen(
     var stock by remember { mutableStateOf("") }
     var stockMinimo by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
-    var idCategoria by remember { mutableLongStateOf(1L) }
-    var idMarca by remember { mutableLongStateOf(1L) }
-    var idProveedor by remember { mutableLongStateOf(1L) }
     var imagenUrl by remember { mutableStateOf("") }
+    var selectedCategoria by remember { mutableStateOf<Categoria?>(null) }
+    var selectedMarca by remember { mutableStateOf<Marca?>(null) }
+    var selectedProveedor by remember { mutableStateOf<Proveedor?>(null) }
+    var categoriaExpanded by remember { mutableStateOf(false) }
+    var marcaExpanded by remember { mutableStateOf(false) }
+    var proveedorExpanded by remember { mutableStateOf(false) }
+
+    val categories by viewModel.categories.collectAsState()
+    val marcas by viewModel.marcas.collectAsState()
+    val proveedores by viewModel.proveedores.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadCategories()
+        viewModel.loadMarcas()
+        viewModel.loadProveedores()
+    }
 
     LaunchedEffect(id) {
         viewModel.getProductById(id)?.let { product ->
@@ -293,6 +422,76 @@ fun EditProductScreen(
             OutlinedTextField(value = stock, onValueChange = { stock = it }, label = { Text("Stock") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
             OutlinedTextField(value = stockMinimo, onValueChange = { stockMinimo = it }, label = { Text("Stock Mínimo") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
             OutlinedTextField(value = imagenUrl, onValueChange = { imagenUrl = it }, label = { Text("URL Imagen") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+
+            ExposedDropdownMenuBox(
+                expanded = categoriaExpanded,
+                onExpandedChange = { categoriaExpanded = !categoriaExpanded }
+            ) {
+                OutlinedTextField(
+                    value = selectedCategoria?.nombre ?: "Seleccionar categoría",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Categoría") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoriaExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                ExposedDropdownMenu(expanded = categoriaExpanded, onDismissRequest = { categoriaExpanded = false }) {
+                    categories.forEach { cat ->
+                        DropdownMenuItem(
+                            text = { Text(cat.nombre) },
+                            onClick = { selectedCategoria = cat; categoriaExpanded = false }
+                        )
+                    }
+                }
+            }
+
+            ExposedDropdownMenuBox(
+                expanded = marcaExpanded,
+                onExpandedChange = { marcaExpanded = !marcaExpanded }
+            ) {
+                OutlinedTextField(
+                    value = selectedMarca?.nombre ?: "Seleccionar marca",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Marca") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = marcaExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                ExposedDropdownMenu(expanded = marcaExpanded, onDismissRequest = { marcaExpanded = false }) {
+                    marcas.forEach { marca ->
+                        DropdownMenuItem(
+                            text = { Text(marca.nombre) },
+                            onClick = { selectedMarca = marca; marcaExpanded = false }
+                        )
+                    }
+                }
+            }
+
+            ExposedDropdownMenuBox(
+                expanded = proveedorExpanded,
+                onExpandedChange = { proveedorExpanded = !proveedorExpanded }
+            ) {
+                OutlinedTextField(
+                    value = selectedProveedor?.razonSocial ?: "Seleccionar proveedor",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Proveedor") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = proveedorExpanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                ExposedDropdownMenu(expanded = proveedorExpanded, onDismissRequest = { proveedorExpanded = false }) {
+                    proveedores.forEach { prov ->
+                        DropdownMenuItem(
+                            text = { Text(prov.razonSocial) },
+                            onClick = { selectedProveedor = prov; proveedorExpanded = false }
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
@@ -305,9 +504,9 @@ fun EditProductScreen(
                         stock = stock.toIntOrNull() ?: 0,
                         stockMinimo = stockMinimo.toIntOrNull() ?: 0,
                         imagen = if (imagenUrl.isBlank()) null else imagenUrl,
-                        idCategoria = idCategoria,
-                        idMarca = idMarca,
-                        idProveedor = idProveedor
+                        idCategoria = selectedCategoria?.idCategoria ?: 1,
+                        idMarca = selectedMarca?.idMarca ?: 1,
+                        idProveedor = selectedProveedor?.idProveedor ?: 1
                     )
                     viewModel.updateProduct(id, request)
                     navController.popBackStack()

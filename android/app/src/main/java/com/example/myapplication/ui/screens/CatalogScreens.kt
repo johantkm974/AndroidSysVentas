@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -70,9 +71,14 @@ fun CategoriaManagementScreen(viewModel: CategoriaViewModel) {
                         ) {
                             Icon(Icons.Default.Category, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(12.dp))
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(cat.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                 Text(cat.descripcion ?: "Sin descripción", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            cat.idCategoria?.let { id ->
+                                IconButton(onClick = { viewModel.deleteCategoria(id) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                                }
                             }
                         }
                     }
@@ -161,7 +167,12 @@ fun MarcaManagementScreen(viewModel: MarcaViewModel) {
                         ) {
                             Icon(Icons.Default.Business, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text(marca.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text(marca.nombre, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            marca.idMarca?.let { id ->
+                                IconButton(onClick = { viewModel.deleteMarca(id) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                                }
+                            }
                         }
                     }
                 }
@@ -245,9 +256,14 @@ fun ProveedorManagementScreen(viewModel: ProveedorViewModel) {
                         ) {
                             Icon(Icons.Default.People, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(12.dp))
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(prov.razonSocial, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                 Text("RUC: ${prov.ruc}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            prov.idProveedor?.let { id ->
+                                IconButton(onClick = { viewModel.deleteProveedor(id) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                                }
                             }
                         }
                     }

@@ -24,6 +24,12 @@ class CategoriaViewModel(private val apiService: ApiService) : ViewModel() {
             try { apiService.createCategoria(categoria); loadCategorias() } catch (e: Exception) {}
         }
     }
+
+    fun deleteCategoria(id: Long) {
+        viewModelScope.launch {
+            try { apiService.deleteCategoria(id); loadCategorias() } catch (e: Exception) {}
+        }
+    }
 }
 
 // --- Marcas ViewModel ---
@@ -42,6 +48,12 @@ class MarcaViewModel(private val apiService: ApiService) : ViewModel() {
             try { apiService.createMarca(marca); loadMarcas() } catch (e: Exception) {}
         }
     }
+
+    fun deleteMarca(id: Long) {
+        viewModelScope.launch {
+            try { apiService.deleteMarca(id); loadMarcas() } catch (e: Exception) {}
+        }
+    }
 }
 
 // --- Proveedores ViewModel ---
@@ -58,6 +70,12 @@ class ProveedorViewModel(private val apiService: ApiService) : ViewModel() {
     fun createProveedor(proveedor: Proveedor) {
         viewModelScope.launch {
             try { apiService.createProveedor(proveedor); loadProveedores() } catch (e: Exception) {}
+        }
+    }
+
+    fun deleteProveedor(id: Long) {
+        viewModelScope.launch {
+            try { apiService.deleteProveedor(id); loadProveedores() } catch (e: Exception) {}
         }
     }
 }

@@ -1,7 +1,9 @@
 package com.example.myapplication.repository
 
+import com.example.myapplication.model.Marca
 import com.example.myapplication.model.ProductoRequest
 import com.example.myapplication.model.ProductoResponse
+import com.example.myapplication.model.Proveedor
 import com.example.myapplication.network.ApiService
 
 class ProductRepository(private val apiService: ApiService) {
@@ -17,6 +19,24 @@ class ProductRepository(private val apiService: ApiService) {
     suspend fun listByCategory(idCategoria: Long): Result<List<ProductoResponse>> {
         return try {
             val response = apiService.listProductsByCategory(idCategoria)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun listMarcas(): Result<List<Marca>> {
+        return try {
+            val response = apiService.listMarcas()
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun listProveedores(): Result<List<Proveedor>> {
+        return try {
+            val response = apiService.listProveedores()
             Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)

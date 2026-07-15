@@ -3,8 +3,10 @@ package com.example.myapplication.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.model.Categoria
+import com.example.myapplication.model.Marca
 import com.example.myapplication.model.ProductoRequest
 import com.example.myapplication.model.ProductoResponse
+import com.example.myapplication.model.Proveedor
 import com.example.myapplication.repository.ProductRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,12 +26,30 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
     private val _categories = MutableStateFlow<List<Categoria>>(emptyList())
     val categories: StateFlow<List<Categoria>> = _categories
 
+    private val _marcas = MutableStateFlow<List<Marca>>(emptyList())
+    val marcas: StateFlow<List<Marca>> = _marcas
+
+    private val _proveedores = MutableStateFlow<List<Proveedor>>(emptyList())
+    val proveedores: StateFlow<List<Proveedor>> = _proveedores
+
     private val _selectedCategoryId = MutableStateFlow<Long?>(null)
     val selectedCategoryId: StateFlow<Long?> = _selectedCategoryId
 
     fun loadCategories() {
         viewModelScope.launch {
             repository.listCategories().onSuccess { _categories.value = it }
+        }
+    }
+
+    fun loadMarcas() {
+        viewModelScope.launch {
+            repository.listMarcas().onSuccess { _marcas.value = it }
+        }
+    }
+
+    fun loadProveedores() {
+        viewModelScope.launch {
+            repository.listProveedores().onSuccess { _proveedores.value = it }
         }
     }
 
