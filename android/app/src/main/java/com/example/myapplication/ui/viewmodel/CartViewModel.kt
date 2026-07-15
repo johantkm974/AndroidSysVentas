@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.model.*
 import com.example.myapplication.repository.OrderRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -13,12 +14,21 @@ data class CartItem(
     var quantity: Int
 )
 
+enum class PaymentMethod(val displayName: String, val icon: String) {
+    CREDIT_CARD("Tarjeta de Crédito/Débito", "💳"),
+    YAPE_PLIN("Yape/Plin", "📱")
+}
+
 class CartViewModel(private val repository: OrderRepository) : ViewModel() {
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
     val cartItems: StateFlow<List<CartItem>> = _cartItems
 
+    private val _selectedPaymentMethod = MutableStateFlow(PaymentMethod.YAPE_PLIN)
+    val selectedPaymentMethod: StateFlow<PaymentMethod> = _selectedPaymentMethod
+
     sealed class CheckoutState {
         object Idle : CheckoutState()
+        object SimulatingPayment : CheckoutState()
         object Loading : CheckoutState()
         object Success : CheckoutState()
         data class Error(val message: String) : CheckoutState()
@@ -29,6 +39,10 @@ class CartViewModel(private val repository: OrderRepository) : ViewModel() {
 
     fun resetCheckoutState() {
         _checkoutState.value = CheckoutState.Idle
+    }
+
+    fun selectPaymentMethod(method: PaymentMethod) {
+        _selectedPaymentMethod.value = method
     }
 
     fun addToCart(product: ProductoResponse) {
@@ -51,9 +65,11 @@ class CartViewModel(private val repository: OrderRepository) : ViewModel() {
             _checkoutState.value = CheckoutState.Error("El carrito está vacío")
             return
         }
-        _checkoutState.value = CheckoutState.Loading
+        _checkoutState.value = CheckoutState.SimulatingPayment
         val items = _cartItems.value.map { ItemPedido(it.product.idProducto, it.quantity) }
         viewModelScope.launch {
+            delay(2500)
+            _checkoutState.value = CheckoutState.Loading
             repository.createOrder(PedidoRequest(items, observacion))
                 .onSuccess {
                     _cartItems.value = emptyList()

@@ -1,5 +1,7 @@
 package com.example.myapplication.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,6 +10,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
@@ -17,45 +20,39 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.myapplication.ui.viewmodel.CartViewModel
+import com.example.myapplication.ui.viewmodel.PaymentMethod
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(viewModel: CartViewModel, navController: NavController) {
     val cartItems by viewModel.cartItems.collectAsState()
     val checkoutState by viewModel.checkoutState.collectAsState()
+    val selectedMethod by viewModel.selectedPaymentMethod.collectAsState()
     var observacion by remember { mutableStateOf("") }
-    var showSuccessDialog by remember { mutableStateOf(false) }
+    var showSuccessScreen by remember { mutableStateOf(false) }
 
     LaunchedEffect(checkoutState) {
         if (checkoutState is CartViewModel.CheckoutState.Success) {
-            showSuccessDialog = true
+            showSuccessScreen = true
         }
     }
 
-    if (showSuccessDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showSuccessDialog = false
+    if (showSuccessScreen) {
+        PaymentSuccessScreen(
+            onContinue = {
+                showSuccessScreen = false
                 viewModel.resetCheckoutState()
                 navController.popBackStack()
-            },
-            title = { Text("Pedido Realizado", fontWeight = FontWeight.Bold) },
-            text = { Text("Su pedido se ha realizado con éxito. Puede ver el estado en \"Mis Pedidos\".") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showSuccessDialog = false
-                        viewModel.resetCheckoutState()
-                        navController.popBackStack()
-                    },
-                    shape = RoundedCornerShape(12.dp)
-                ) { Text("Aceptar") }
             }
         )
+        return
     }
 
     Scaffold(
@@ -80,7 +77,7 @@ fun CartScreen(viewModel: CartViewModel, navController: NavController) {
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            if (cartItems.isEmpty() && checkoutState !is CartViewModel.CheckoutState.Loading) {
+            if (cartItems.isEmpty() && checkoutState !is CartViewModel.CheckoutState.Loading && checkoutState !is CartViewModel.CheckoutState.SimulatingPayment) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -168,11 +165,59 @@ fun CartScreen(viewModel: CartViewModel, navController: NavController) {
                             shape = RoundedCornerShape(12.dp),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = {
-                                if (checkoutState !is CartViewModel.CheckoutState.Loading)
+                                if (checkoutState !is CartViewModel.CheckoutState.Loading && checkoutState !is CartViewModel.CheckoutState.SimulatingPayment)
                                     viewModel.checkout(observacion)
                             })
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            "Método de Pago",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        PaymentMethod.entries.forEach { method ->
+                            val isSelected = selectedMethod == method
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clickable(enabled = checkoutState is CartViewModel.CheckoutState.Idle) {
+                                        viewModel.selectPaymentMethod(method)
+                                    },
+                                shape = RoundedCornerShape(12.dp),
+                                border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = {
+                                            if (checkoutState is CartViewModel.CheckoutState.Idle)
+                                                viewModel.selectPaymentMethod(method)
+                                        }
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(method.icon, fontSize = 20.sp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        method.displayName,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
                         val total = cartItems.sumOf { it.product.precioVenta * it.quantity }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -202,23 +247,88 @@ fun CartScreen(viewModel: CartViewModel, navController: NavController) {
 
                         Button(
                             onClick = {
-                                if (checkoutState !is CartViewModel.CheckoutState.Loading)
+                                if (checkoutState is CartViewModel.CheckoutState.Idle)
                                     viewModel.checkout(observacion)
                             },
                             modifier = Modifier.fillMaxWidth().height(52.dp),
                             shape = RoundedCornerShape(12.dp),
-                            enabled = checkoutState !is CartViewModel.CheckoutState.Loading
+                            enabled = checkoutState is CartViewModel.CheckoutState.Idle
                         ) {
-                            if (checkoutState is CartViewModel.CheckoutState.Loading) {
-                                CircularProgressIndicator(
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Text("Confirmar Pedido", style = MaterialTheme.typography.labelLarge)
+                            when (checkoutState) {
+                                is CartViewModel.CheckoutState.SimulatingPayment -> {
+                                    CircularProgressIndicator(
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Procesando pago...")
+                                }
+                                is CartViewModel.CheckoutState.Loading -> {
+                                    CircularProgressIndicator(
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                }
+                                else -> Text("Confirmar y Pagar", style = MaterialTheme.typography.labelLarge)
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PaymentSuccessScreen(onContinue: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(80.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "¡Pago Exitoso!",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Tu pedido se ha realizado correctamente.\nPuedes ver su estado en \"Mis Pedidos\".",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = onContinue,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Continuar", style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
