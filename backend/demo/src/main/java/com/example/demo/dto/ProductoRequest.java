@@ -21,10 +21,7 @@ public class ProductoRequest {
     private Integer stock;
     private Integer stockMinimo;
     private String imagen;
-    @NotNull
     private Long idCategoria;
-    @NotNull
     private Long idMarca;
-    @NotNull
     private Long idProveedor;
 }

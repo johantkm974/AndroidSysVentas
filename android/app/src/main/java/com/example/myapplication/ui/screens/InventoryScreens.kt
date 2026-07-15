@@ -444,6 +444,8 @@ fun EditProductScreen(
         viewModel.loadProveedores()
     }
 
+    var productLoaded by remember { mutableStateOf(false) }
+
     LaunchedEffect(id) {
         viewModel.getProductById(id)?.let { product ->
             codigo = product.codigo
@@ -454,6 +456,20 @@ fun EditProductScreen(
             stockMinimo = product.stockMinimo.toString()
             descripcion = product.descripcion ?: ""
             imagenUrl = product.imagen ?: ""
+            productLoaded = true
+        }
+    }
+
+    LaunchedEffect(productLoaded, categories, marcas, proveedores) {
+        if (productLoaded) {
+            viewModel.getProductById(id)?.let { product ->
+                selectedCategoria = categories.find { it.nombre == product.categoria }
+                if (selectedCategoria == null && categories.isNotEmpty()) selectedCategoria = categories.first()
+                selectedMarca = marcas.find { it.nombre == product.marca }
+                if (selectedMarca == null && marcas.isNotEmpty()) selectedMarca = marcas.first()
+                selectedProveedor = proveedores.find { it.razonSocial == product.proveedor }
+                if (selectedProveedor == null && proveedores.isNotEmpty()) selectedProveedor = proveedores.first()
+            }
         }
     }
 
@@ -465,9 +481,6 @@ fun EditProductScreen(
         if (precioVenta.isBlank()) camposFaltantes.add("Precio Venta")
         if (stock.isBlank()) camposFaltantes.add("Stock")
         if (stockMinimo.isBlank()) camposFaltantes.add("Stock Mínimo")
-        if (selectedCategoria == null) camposFaltantes.add("Categoría")
-        if (selectedMarca == null) camposFaltantes.add("Marca")
-        if (selectedProveedor == null) camposFaltantes.add("Proveedor")
         return if (camposFaltantes.isNotEmpty()) {
             errorMessage = "Complete todos los campos: ${camposFaltantes.joinToString(", ")}"
             false
@@ -488,9 +501,9 @@ fun EditProductScreen(
             stock = stock.toIntOrNull() ?: 0,
             stockMinimo = stockMinimo.toIntOrNull() ?: 0,
             imagen = if (imagenUrl.isBlank()) null else imagenUrl,
-            idCategoria = selectedCategoria!!.idCategoria!!,
-            idMarca = selectedMarca!!.idMarca!!,
-            idProveedor = selectedProveedor!!.idProveedor!!
+            idCategoria = selectedCategoria?.idCategoria,
+            idMarca = selectedMarca?.idMarca,
+            idProveedor = selectedProveedor?.idProveedor
         )
         viewModel.updateProduct(id, request)
         navController.popBackStack()
@@ -547,7 +560,7 @@ fun EditProductScreen(
                     value = selectedCategoria?.nombre ?: "Seleccionar categoría",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Categoría *") },
+                    label = { Text("Categoría") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoriaExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(),
                     shape = RoundedCornerShape(12.dp)
@@ -570,7 +583,7 @@ fun EditProductScreen(
                     value = selectedMarca?.nombre ?: "Seleccionar marca",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Marca *") },
+                    label = { Text("Marca") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = marcaExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(),
                     shape = RoundedCornerShape(12.dp)
@@ -593,7 +606,7 @@ fun EditProductScreen(
                     value = selectedProveedor?.razonSocial ?: "Seleccionar proveedor",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Proveedor *") },
+                    label = { Text("Proveedor") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = proveedorExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(),
                     shape = RoundedCornerShape(12.dp)

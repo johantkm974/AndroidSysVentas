@@ -107,9 +107,9 @@ data class ProductoRequest(
     val stock: Int,
     val stockMinimo: Int,
     val imagen: String?,
-    val idCategoria: Long,
-    val idMarca: Long,
-    val idProveedor: Long
+    val idCategoria: Long? = null,
+    val idMarca: Long? = null,
+    val idProveedor: Long? = null
 )
 
 // --- Orders & Sales ---

@@ -48,6 +48,9 @@ public class ProductoServiceImpl implements ProductoService {
         if (productoRepository.findByCodigo(request.getCodigo()).isPresent()) {
             throw new BadRequestException("El código ya existe");
         }
+        if (request.getIdCategoria() == null) throw new BadRequestException("idCategoria es obligatorio");
+        if (request.getIdMarca() == null) throw new BadRequestException("idMarca es obligatorio");
+        if (request.getIdProveedor() == null) throw new BadRequestException("idProveedor es obligatorio");
 
         Categoria categoria = categoriaRepository.findById(request.getIdCategoria())
                 .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
@@ -79,12 +82,21 @@ public class ProductoServiceImpl implements ProductoService {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado: " + id));
 
-        Categoria categoria = categoriaRepository.findById(request.getIdCategoria())
-                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
-        Marca marca = marcaRepository.findById(request.getIdMarca())
-                .orElseThrow(() -> new ResourceNotFoundException("Marca no encontrada"));
-        Proveedor proveedor = proveedorRepository.findById(request.getIdProveedor())
-                .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado"));
+        if (request.getIdCategoria() != null) {
+            Categoria categoria = categoriaRepository.findById(request.getIdCategoria())
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
+            producto.setCategoria(categoria);
+        }
+        if (request.getIdMarca() != null) {
+            Marca marca = marcaRepository.findById(request.getIdMarca())
+                    .orElseThrow(() -> new ResourceNotFoundException("Marca no encontrada"));
+            producto.setMarca(marca);
+        }
+        if (request.getIdProveedor() != null) {
+            Proveedor proveedor = proveedorRepository.findById(request.getIdProveedor())
+                    .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado"));
+            producto.setProveedor(proveedor);
+        }
 
         producto.setCodigo(request.getCodigo());
         producto.setNombre(request.getNombre());
@@ -94,9 +106,6 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setStock(request.getStock() != null ? request.getStock() : producto.getStock());
         producto.setStockMinimo(request.getStockMinimo() != null ? request.getStockMinimo() : producto.getStockMinimo());
         producto.setImagen(request.getImagen());
-        producto.setCategoria(categoria);
-        producto.setMarca(marca);
-        producto.setProveedor(proveedor);
 
         return toResponse(productoRepository.save(producto));
     }
