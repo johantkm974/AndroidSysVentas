@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -12,16 +14,49 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.myapplication.ui.viewmodel.CartViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(viewModel: CartViewModel, navController: NavController) {
     val cartItems by viewModel.cartItems.collectAsState()
+    val checkoutState by viewModel.checkoutState.collectAsState()
     var observacion by remember { mutableStateOf("") }
+    var showSuccessDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(checkoutState) {
+        if (checkoutState is CartViewModel.CheckoutState.Success) {
+            showSuccessDialog = true
+        }
+    }
+
+    if (showSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showSuccessDialog = false
+                viewModel.resetCheckoutState()
+                navController.popBackStack()
+            },
+            title = { Text("Pedido Realizado", fontWeight = FontWeight.Bold) },
+            text = { Text("Su pedido se ha realizado con éxito. Puede ver el estado en \"Mis Pedidos\".") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSuccessDialog = false
+                        viewModel.resetCheckoutState()
+                        navController.popBackStack()
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                ) { Text("Aceptar") }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -45,7 +80,7 @@ fun CartScreen(viewModel: CartViewModel, navController: NavController) {
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            if (cartItems.isEmpty()) {
+            if (cartItems.isEmpty() && checkoutState !is CartViewModel.CheckoutState.Loading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -86,15 +121,24 @@ fun CartScreen(viewModel: CartViewModel, navController: NavController) {
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
                                     color = MaterialTheme.colorScheme.primaryContainer,
-                                    modifier = Modifier.size(48.dp)
+                                    modifier = Modifier.size(56.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        Text(
-                                            "${item.quantity}",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
+                                        if (!item.product.imagen.isNullOrBlank()) {
+                                            AsyncImage(
+                                                model = item.product.imagen,
+                                                contentDescription = null,
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Text(
+                                                "${item.quantity}",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     }
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -121,7 +165,12 @@ fun CartScreen(viewModel: CartViewModel, navController: NavController) {
                             onValueChange = { observacion = it },
                             label = { Text("Observación (Opcional)") },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = {
+                                if (checkoutState !is CartViewModel.CheckoutState.Loading)
+                                    viewModel.checkout(observacion)
+                            })
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         val total = cartItems.sumOf { it.product.precioVenta * it.quantity }
@@ -134,12 +183,41 @@ fun CartScreen(viewModel: CartViewModel, navController: NavController) {
                             Text("S/ $total", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
                         Spacer(modifier = Modifier.height(12.dp))
+
+                        if (checkoutState is CartViewModel.CheckoutState.Error) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = (checkoutState as CartViewModel.CheckoutState.Error).message,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.padding(12.dp),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
                         Button(
-                            onClick = { viewModel.checkout(observacion) { navController.popBackStack() } },
+                            onClick = {
+                                if (checkoutState !is CartViewModel.CheckoutState.Loading)
+                                    viewModel.checkout(observacion)
+                            },
                             modifier = Modifier.fillMaxWidth().height(52.dp),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = checkoutState !is CartViewModel.CheckoutState.Loading
                         ) {
-                            Text("Confirmar Pedido", style = MaterialTheme.typography.labelLarge)
+                            if (checkoutState is CartViewModel.CheckoutState.Loading) {
+                                CircularProgressIndicator(
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Confirmar Pedido", style = MaterialTheme.typography.labelLarge)
+                            }
                         }
                     }
                 }

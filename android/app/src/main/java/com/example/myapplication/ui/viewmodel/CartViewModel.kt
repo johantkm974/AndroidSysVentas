@@ -17,6 +17,20 @@ class CartViewModel(private val repository: OrderRepository) : ViewModel() {
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
     val cartItems: StateFlow<List<CartItem>> = _cartItems
 
+    sealed class CheckoutState {
+        object Idle : CheckoutState()
+        object Loading : CheckoutState()
+        object Success : CheckoutState()
+        data class Error(val message: String) : CheckoutState()
+    }
+
+    private val _checkoutState = MutableStateFlow<CheckoutState>(CheckoutState.Idle)
+    val checkoutState: StateFlow<CheckoutState> = _checkoutState
+
+    fun resetCheckoutState() {
+        _checkoutState.value = CheckoutState.Idle
+    }
+
     fun addToCart(product: ProductoResponse) {
         val currentList = _cartItems.value.toMutableList()
         val existingItem = currentList.find { it.product.idProducto == product.idProducto }
@@ -32,13 +46,22 @@ class CartViewModel(private val repository: OrderRepository) : ViewModel() {
         _cartItems.value = _cartItems.value.filter { it.product.idProducto != productId }
     }
 
-    fun checkout(observacion: String, onSuccess: () -> Unit) {
+    fun checkout(observacion: String) {
+        if (_cartItems.value.isEmpty()) {
+            _checkoutState.value = CheckoutState.Error("El carrito está vacío")
+            return
+        }
+        _checkoutState.value = CheckoutState.Loading
         val items = _cartItems.value.map { ItemPedido(it.product.idProducto, it.quantity) }
         viewModelScope.launch {
-            repository.createOrder(PedidoRequest(items, observacion)).onSuccess {
-                _cartItems.value = emptyList()
-                onSuccess()
-            }
+            repository.createOrder(PedidoRequest(items, observacion))
+                .onSuccess {
+                    _cartItems.value = emptyList()
+                    _checkoutState.value = CheckoutState.Success
+                }
+                .onFailure { error ->
+                    _checkoutState.value = CheckoutState.Error(error.message ?: "Error al realizar el pedido")
+                }
         }
     }
 }

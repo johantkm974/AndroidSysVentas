@@ -3,13 +3,19 @@ package com.example.myapplication.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.viewmodel.LoginUiState
@@ -22,7 +28,18 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     val uiState by viewModel.uiState.collectAsState()
+    val focusManager = LocalFocusManager.current
+
+    fun validateAndLogin() {
+        val emailError = if (email.isBlank()) "Ingrese su correo electrónico" else if (!email.contains("@")) "El correo debe contener @" else null
+        val passwordError = if (password.isBlank()) "Ingrese su contraseña" else null
+        errorMessage = emailError ?: passwordError
+        if (errorMessage == null) {
+            viewModel.login(email, password)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -70,25 +87,29 @@ fun LoginScreen(
                 ) {
                     OutlinedTextField(
                         value = email,
-                        onValueChange = { email = it },
+                        onValueChange = { email = it; errorMessage = null },
                         label = { Text("Correo Electrónico") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = password,
-                        onValueChange = { password = it },
+                        onValueChange = { password = it; errorMessage = null },
                         label = { Text("Contraseña") },
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { validateAndLogin() })
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
-                        onClick = { viewModel.login(email, password) },
+                        onClick = { validateAndLogin() },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
@@ -108,14 +129,15 @@ fun LoginScreen(
                             )
                         }
                     }
-                    if (uiState is LoginUiState.Error) {
+                    val displayError = errorMessage ?: (uiState as? LoginUiState.Error)?.message
+                    if (displayError != null) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Surface(
                             color = MaterialTheme.colorScheme.errorContainer,
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
-                                text = (uiState as LoginUiState.Error).message,
+                                text = displayError,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.padding(12.dp),
                                 style = MaterialTheme.typography.bodySmall

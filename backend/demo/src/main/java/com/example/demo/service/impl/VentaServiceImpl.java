@@ -54,7 +54,12 @@ public class VentaServiceImpl implements VentaService {
         Pedido pedido = pedidoRepository.findById(request.getIdPedido())
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
 
+        // Si ya fue procesado (automatizado), devolver venta existente
         if (!"PENDIENTE".equals(pedido.getEstadoPedido().getNombre())) {
+            Venta existente = ventaRepository.findByPedidoIdPedido(request.getIdPedido()).orElse(null);
+            if (existente != null) {
+                return toResponse(existente);
+            }
             throw new BadRequestException("El pedido ya fue procesado o cancelado");
         }
 

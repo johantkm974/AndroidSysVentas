@@ -166,18 +166,7 @@ fun OrderListItem(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (order.estado == "PENDIENTE") {
-                        FilledTonalButton(
-                            onClick = onConfirm,
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Confirmar")
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    if (order.estado == "CONFIRMADO") {
+                    if (order.estado == "CONFIRMADO" || order.estado == "PREPARANDO" || order.estado == "ENVIADO") {
                         FilledTonalButton(
                             onClick = { onStatusChange(5) },
                             shape = RoundedCornerShape(12.dp),
@@ -191,7 +180,7 @@ fun OrderListItem(
                         }
                     }
                 }
-            } else if (!isAdminOrSeller && order.estado == "PENDIENTE") {
+            } else if (!isAdminOrSeller && (order.estado == "PENDIENTE" || order.estado == "CONFIRMADO")) {
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(

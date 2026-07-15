@@ -109,11 +109,11 @@ fun NavGraph(
             OrderListScreen(orderViewModel, navController, isAdminOrSeller)
         }
         composable(Screen.VentaList.route) { VentaListScreen(ventaViewModel, navController) }
-        composable(Screen.Dashboard.route) { AdminDashboardScreen(dashboardViewModel) }
+        composable(Screen.Dashboard.route) { AdminDashboardScreen(dashboardViewModel, navController) }
         composable(Screen.Cart.route) { CartScreen(cartViewModel, navController) }
-        composable(Screen.CategoriaManagement.route) { CategoriaManagementScreen(categoriaViewModel) }
-        composable(Screen.MarcaManagement.route) { MarcaManagementScreen(marcaViewModel) }
-        composable(Screen.ProveedorManagement.route) { ProveedorManagementScreen(proveedorViewModel) }
+        composable(Screen.CategoriaManagement.route) { CategoriaManagementScreen(categoriaViewModel, navController) }
+        composable(Screen.MarcaManagement.route) { MarcaManagementScreen(marcaViewModel, navController) }
+        composable(Screen.ProveedorManagement.route) { ProveedorManagementScreen(proveedorViewModel, navController) }
         composable(Screen.ProductList.route) { 
             ProductListScreen(productViewModel, cartViewModel, navController, onLogout) 
         }

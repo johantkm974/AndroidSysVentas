@@ -1,11 +1,14 @@
 package com.example.myapplication.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -17,9 +20,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.myapplication.model.Categoria
 import com.example.myapplication.model.Marca
 import com.example.myapplication.model.ProductoRequest
@@ -148,12 +157,21 @@ fun InventoryProductItem(product: ProductoResponse, onDelete: () -> Unit, onEdit
                 modifier = Modifier.size(56.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.Inventory,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(28.dp)
-                    )
+                    if (!product.imagen.isNullOrBlank()) {
+                        AsyncImage(
+                            model = product.imagen,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Inventory,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.width(12.dp))
@@ -200,15 +218,56 @@ fun AddProductScreen(
     var categoriaExpanded by remember { mutableStateOf(false) }
     var marcaExpanded by remember { mutableStateOf(false) }
     var proveedorExpanded by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val categories by viewModel.categories.collectAsState()
     val marcas by viewModel.marcas.collectAsState()
     val proveedores by viewModel.proveedores.collectAsState()
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) {
         viewModel.loadCategories()
         viewModel.loadMarcas()
         viewModel.loadProveedores()
+    }
+
+    fun validate(): Boolean {
+        val camposFaltantes = mutableListOf<String>()
+        if (codigo.isBlank()) camposFaltantes.add("Código")
+        if (nombre.isBlank()) camposFaltantes.add("Nombre")
+        if (precioCompra.isBlank()) camposFaltantes.add("Precio Compra")
+        if (precioVenta.isBlank()) camposFaltantes.add("Precio Venta")
+        if (stock.isBlank()) camposFaltantes.add("Stock")
+        if (stockMinimo.isBlank()) camposFaltantes.add("Stock Mínimo")
+        if (selectedCategoria == null) camposFaltantes.add("Categoría")
+        if (selectedMarca == null) camposFaltantes.add("Marca")
+        if (selectedProveedor == null) camposFaltantes.add("Proveedor")
+        return if (camposFaltantes.isNotEmpty()) {
+            errorMessage = "Complete todos los campos: ${camposFaltantes.joinToString(", ")}"
+            false
+        } else {
+            errorMessage = null
+            true
+        }
+    }
+
+    fun submit() {
+        if (!validate()) return
+        val request = ProductoRequest(
+            codigo = codigo,
+            nombre = nombre,
+            descripcion = descripcion,
+            precioCompra = precioCompra.toDoubleOrNull() ?: 0.0,
+            precioVenta = precioVenta.toDoubleOrNull() ?: 0.0,
+            stock = stock.toIntOrNull() ?: 0,
+            stockMinimo = stockMinimo.toIntOrNull() ?: 0,
+            imagen = if (imagenUrl.isBlank()) null else imagenUrl,
+            idCategoria = selectedCategoria!!.idCategoria!!,
+            idMarca = selectedMarca!!.idMarca!!,
+            idProveedor = selectedProveedor!!.idProveedor!!
+        )
+        viewModel.createProduct(request)
+        navController.popBackStack()
     }
 
     Scaffold(
@@ -237,14 +296,22 @@ fun AddProductScreen(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedTextField(value = codigo, onValueChange = { codigo = it }, label = { Text("Código") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(value = descripcion, onValueChange = { descripcion = it }, label = { Text("Descripción") }, modifier = Modifier.fillMaxWidth(), minLines = 3, shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(value = precioCompra, onValueChange = { precioCompra = it }, label = { Text("Precio Compra") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(value = precioVenta, onValueChange = { precioVenta = it }, label = { Text("Precio Venta") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(value = stock, onValueChange = { stock = it }, label = { Text("Stock") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(value = stockMinimo, onValueChange = { stockMinimo = it }, label = { Text("Stock Mínimo") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(value = imagenUrl, onValueChange = { imagenUrl = it }, label = { Text("URL Imagen") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            OutlinedTextField(value = codigo, onValueChange = { codigo = it; errorMessage = null }, label = { Text("Código *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+            OutlinedTextField(value = nombre, onValueChange = { nombre = it; errorMessage = null }, label = { Text("Nombre *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+            OutlinedTextField(value = descripcion, onValueChange = { descripcion = it }, label = { Text("Descripción") }, modifier = Modifier.fillMaxWidth(), minLines = 3, shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+            OutlinedTextField(value = precioCompra, onValueChange = { precioCompra = it; errorMessage = null }, label = { Text("Precio Compra *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+            OutlinedTextField(value = precioVenta, onValueChange = { precioVenta = it; errorMessage = null }, label = { Text("Precio Venta *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+            OutlinedTextField(value = stock, onValueChange = { stock = it; errorMessage = null }, label = { Text("Stock *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+            OutlinedTextField(value = stockMinimo, onValueChange = { stockMinimo = it; errorMessage = null }, label = { Text("Stock Mínimo *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+            OutlinedTextField(value = imagenUrl, onValueChange = { imagenUrl = it }, label = { Text("URL Imagen") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
 
             ExposedDropdownMenuBox(
                 expanded = categoriaExpanded,
@@ -254,7 +321,7 @@ fun AddProductScreen(
                     value = selectedCategoria?.nombre ?: "Seleccionar categoría",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Categoría") },
+                    label = { Text("Categoría *") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoriaExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(),
                     shape = RoundedCornerShape(12.dp)
@@ -263,7 +330,7 @@ fun AddProductScreen(
                     categories.forEach { cat ->
                         DropdownMenuItem(
                             text = { Text(cat.nombre) },
-                            onClick = { selectedCategoria = cat; categoriaExpanded = false }
+                            onClick = { selectedCategoria = cat; errorMessage = null; categoriaExpanded = false }
                         )
                     }
                 }
@@ -277,7 +344,7 @@ fun AddProductScreen(
                     value = selectedMarca?.nombre ?: "Seleccionar marca",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Marca") },
+                    label = { Text("Marca *") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = marcaExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(),
                     shape = RoundedCornerShape(12.dp)
@@ -286,7 +353,7 @@ fun AddProductScreen(
                     marcas.forEach { marca ->
                         DropdownMenuItem(
                             text = { Text(marca.nombre) },
-                            onClick = { selectedMarca = marca; marcaExpanded = false }
+                            onClick = { selectedMarca = marca; errorMessage = null; marcaExpanded = false }
                         )
                     }
                 }
@@ -300,7 +367,7 @@ fun AddProductScreen(
                     value = selectedProveedor?.razonSocial ?: "Seleccionar proveedor",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Proveedor") },
+                    label = { Text("Proveedor *") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = proveedorExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(),
                     shape = RoundedCornerShape(12.dp)
@@ -309,31 +376,31 @@ fun AddProductScreen(
                     proveedores.forEach { prov ->
                         DropdownMenuItem(
                             text = { Text(prov.razonSocial) },
-                            onClick = { selectedProveedor = prov; proveedorExpanded = false }
+                            onClick = { selectedProveedor = prov; errorMessage = null; proveedorExpanded = false }
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = {
-                    val request = ProductoRequest(
-                        codigo = codigo,
-                        nombre = nombre,
-                        descripcion = descripcion,
-                        precioCompra = precioCompra.toDoubleOrNull() ?: 0.0,
-                        precioVenta = precioVenta.toDoubleOrNull() ?: 0.0,
-                        stock = stock.toIntOrNull() ?: 0,
-                        stockMinimo = stockMinimo.toIntOrNull() ?: 0,
-                        imagen = if (imagenUrl.isBlank()) null else imagenUrl,
-                        idCategoria = selectedCategoria?.idCategoria ?: 1,
-                        idMarca = selectedMarca?.idMarca ?: 1,
-                        idProveedor = selectedProveedor?.idProveedor ?: 1
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (errorMessage != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = errorMessage!!,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall
                     )
-                    viewModel.createProduct(request)
-                    navController.popBackStack()
-                },
+                }
+            }
+
+            Button(
+                onClick = { submit() },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -364,10 +431,12 @@ fun EditProductScreen(
     var categoriaExpanded by remember { mutableStateOf(false) }
     var marcaExpanded by remember { mutableStateOf(false) }
     var proveedorExpanded by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val categories by viewModel.categories.collectAsState()
     val marcas by viewModel.marcas.collectAsState()
     val proveedores by viewModel.proveedores.collectAsState()
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) {
         viewModel.loadCategories()
@@ -386,6 +455,45 @@ fun EditProductScreen(
             descripcion = product.descripcion ?: ""
             imagenUrl = product.imagen ?: ""
         }
+    }
+
+    fun validate(): Boolean {
+        val camposFaltantes = mutableListOf<String>()
+        if (codigo.isBlank()) camposFaltantes.add("Código")
+        if (nombre.isBlank()) camposFaltantes.add("Nombre")
+        if (precioCompra.isBlank()) camposFaltantes.add("Precio Compra")
+        if (precioVenta.isBlank()) camposFaltantes.add("Precio Venta")
+        if (stock.isBlank()) camposFaltantes.add("Stock")
+        if (stockMinimo.isBlank()) camposFaltantes.add("Stock Mínimo")
+        if (selectedCategoria == null) camposFaltantes.add("Categoría")
+        if (selectedMarca == null) camposFaltantes.add("Marca")
+        if (selectedProveedor == null) camposFaltantes.add("Proveedor")
+        return if (camposFaltantes.isNotEmpty()) {
+            errorMessage = "Complete todos los campos: ${camposFaltantes.joinToString(", ")}"
+            false
+        } else {
+            errorMessage = null
+            true
+        }
+    }
+
+    fun submit() {
+        if (!validate()) return
+        val request = ProductoRequest(
+            codigo = codigo,
+            nombre = nombre,
+            descripcion = descripcion,
+            precioCompra = precioCompra.toDoubleOrNull() ?: 0.0,
+            precioVenta = precioVenta.toDoubleOrNull() ?: 0.0,
+            stock = stock.toIntOrNull() ?: 0,
+            stockMinimo = stockMinimo.toIntOrNull() ?: 0,
+            imagen = if (imagenUrl.isBlank()) null else imagenUrl,
+            idCategoria = selectedCategoria!!.idCategoria!!,
+            idMarca = selectedMarca!!.idMarca!!,
+            idProveedor = selectedProveedor!!.idProveedor!!
+        )
+        viewModel.updateProduct(id, request)
+        navController.popBackStack()
     }
 
     Scaffold(
@@ -414,14 +522,22 @@ fun EditProductScreen(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedTextField(value = codigo, onValueChange = { codigo = it }, label = { Text("Código") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(value = descripcion, onValueChange = { descripcion = it }, label = { Text("Descripción") }, modifier = Modifier.fillMaxWidth(), minLines = 3, shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(value = precioCompra, onValueChange = { precioCompra = it }, label = { Text("Precio Compra") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(value = precioVenta, onValueChange = { precioVenta = it }, label = { Text("Precio Venta") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(value = stock, onValueChange = { stock = it }, label = { Text("Stock") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(value = stockMinimo, onValueChange = { stockMinimo = it }, label = { Text("Stock Mínimo") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-            OutlinedTextField(value = imagenUrl, onValueChange = { imagenUrl = it }, label = { Text("URL Imagen") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+            OutlinedTextField(value = codigo, onValueChange = { codigo = it; errorMessage = null }, label = { Text("Código *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+            OutlinedTextField(value = nombre, onValueChange = { nombre = it; errorMessage = null }, label = { Text("Nombre *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+            OutlinedTextField(value = descripcion, onValueChange = { descripcion = it }, label = { Text("Descripción") }, modifier = Modifier.fillMaxWidth(), minLines = 3, shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+            OutlinedTextField(value = precioCompra, onValueChange = { precioCompra = it; errorMessage = null }, label = { Text("Precio Compra *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+            OutlinedTextField(value = precioVenta, onValueChange = { precioVenta = it; errorMessage = null }, label = { Text("Precio Venta *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+            OutlinedTextField(value = stock, onValueChange = { stock = it; errorMessage = null }, label = { Text("Stock *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+            OutlinedTextField(value = stockMinimo, onValueChange = { stockMinimo = it; errorMessage = null }, label = { Text("Stock Mínimo *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+            OutlinedTextField(value = imagenUrl, onValueChange = { imagenUrl = it }, label = { Text("URL Imagen") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
 
             ExposedDropdownMenuBox(
                 expanded = categoriaExpanded,
@@ -431,7 +547,7 @@ fun EditProductScreen(
                     value = selectedCategoria?.nombre ?: "Seleccionar categoría",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Categoría") },
+                    label = { Text("Categoría *") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoriaExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(),
                     shape = RoundedCornerShape(12.dp)
@@ -440,7 +556,7 @@ fun EditProductScreen(
                     categories.forEach { cat ->
                         DropdownMenuItem(
                             text = { Text(cat.nombre) },
-                            onClick = { selectedCategoria = cat; categoriaExpanded = false }
+                            onClick = { selectedCategoria = cat; errorMessage = null; categoriaExpanded = false }
                         )
                     }
                 }
@@ -454,7 +570,7 @@ fun EditProductScreen(
                     value = selectedMarca?.nombre ?: "Seleccionar marca",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Marca") },
+                    label = { Text("Marca *") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = marcaExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(),
                     shape = RoundedCornerShape(12.dp)
@@ -463,7 +579,7 @@ fun EditProductScreen(
                     marcas.forEach { marca ->
                         DropdownMenuItem(
                             text = { Text(marca.nombre) },
-                            onClick = { selectedMarca = marca; marcaExpanded = false }
+                            onClick = { selectedMarca = marca; errorMessage = null; marcaExpanded = false }
                         )
                     }
                 }
@@ -477,7 +593,7 @@ fun EditProductScreen(
                     value = selectedProveedor?.razonSocial ?: "Seleccionar proveedor",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Proveedor") },
+                    label = { Text("Proveedor *") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = proveedorExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(),
                     shape = RoundedCornerShape(12.dp)
@@ -486,31 +602,31 @@ fun EditProductScreen(
                     proveedores.forEach { prov ->
                         DropdownMenuItem(
                             text = { Text(prov.razonSocial) },
-                            onClick = { selectedProveedor = prov; proveedorExpanded = false }
+                            onClick = { selectedProveedor = prov; errorMessage = null; proveedorExpanded = false }
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = {
-                    val request = ProductoRequest(
-                        codigo = codigo,
-                        nombre = nombre,
-                        descripcion = descripcion,
-                        precioCompra = precioCompra.toDoubleOrNull() ?: 0.0,
-                        precioVenta = precioVenta.toDoubleOrNull() ?: 0.0,
-                        stock = stock.toIntOrNull() ?: 0,
-                        stockMinimo = stockMinimo.toIntOrNull() ?: 0,
-                        imagen = if (imagenUrl.isBlank()) null else imagenUrl,
-                        idCategoria = selectedCategoria?.idCategoria ?: 1,
-                        idMarca = selectedMarca?.idMarca ?: 1,
-                        idProveedor = selectedProveedor?.idProveedor ?: 1
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (errorMessage != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = errorMessage!!,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall
                     )
-                    viewModel.updateProduct(id, request)
-                    navController.popBackStack()
-                },
+                }
+            }
+
+            Button(
+                onClick = { submit() },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {

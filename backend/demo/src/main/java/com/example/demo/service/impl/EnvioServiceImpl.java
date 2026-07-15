@@ -20,6 +20,11 @@ public class EnvioServiceImpl implements EnvioService {
     private final PedidoRepository pedidoRepository;
     private final EstadoEnvioRepository estadoEnvioRepository;
     private final SeguimientoEnvioRepository seguimientoRepository;
+    private final EstadoPedidoRepository estadoPedidoRepository;
+    private final VentaRepository ventaRepository;
+    private final EstadoVentaRepository estadoVentaRepository;
+    private final ProductoRepository productoRepository;
+    private final MovimientoInventarioRepository movimientoRepository;
 
     @Override
     public List<Envio> listarTodos() {
@@ -81,12 +86,66 @@ public class EnvioServiceImpl implements EnvioService {
                 .orElseThrow(() -> new ResourceNotFoundException("Estado de envío no encontrado: " + idEstadoEnvio));
 
         envio.setEstadoEnvio(nuevoEstado);
+        Pedido pedido = envio.getPedido();
 
-        if ("EN_RUTA".equals(nuevoEstado.getNombre())) {
-            envio.setFechaEnvio(java.time.LocalDateTime.now());
-        }
-        if ("ENTREGADO".equals(nuevoEstado.getNombre())) {
-            envio.setFechaEntrega(java.time.LocalDateTime.now());
+        switch (nuevoEstado.getNombre()) {
+            case "EN_RUTA":
+                envio.setFechaEnvio(java.time.LocalDateTime.now());
+                EstadoPedido enviado = estadoPedidoRepository.findByNombre("ENVIADO")
+                        .orElseThrow(() -> new RuntimeException("Estado ENVIADO no configurado"));
+                pedido.setEstadoPedido(enviado);
+                pedidoRepository.save(pedido);
+                break;
+
+            case "ENTREGADO":
+                envio.setFechaEntrega(java.time.LocalDateTime.now());
+                EstadoPedido entregado = estadoPedidoRepository.findByNombre("ENTREGADO")
+                        .orElseThrow(() -> new RuntimeException("Estado ENTREGADO no configurado"));
+                pedido.setEstadoPedido(entregado);
+                pedidoRepository.save(pedido);
+
+                Venta venta = ventaRepository.findByPedidoIdPedido(pedido.getIdPedido()).orElse(null);
+                if (venta != null) {
+                    EstadoVenta pagada = estadoVentaRepository.findByNombre("PAGADA")
+                            .orElseThrow(() -> new RuntimeException("Estado PAGADA no configurado"));
+                    venta.setEstadoVenta(pagada);
+                    ventaRepository.save(venta);
+                }
+                break;
+
+            case "CANCELADO":
+                EstadoPedido cancelado = estadoPedidoRepository.findByNombre("CANCELADO")
+                        .orElseThrow(() -> new RuntimeException("Estado CANCELADO no configurado"));
+                pedido.setEstadoPedido(cancelado);
+                pedidoRepository.save(pedido);
+
+                Venta ventaCancel = ventaRepository.findByPedidoIdPedido(pedido.getIdPedido()).orElse(null);
+                if (ventaCancel != null && !"ANULADA".equals(ventaCancel.getEstadoVenta().getNombre())) {
+                    EstadoVenta anulada = estadoVentaRepository.findByNombre("ANULADA")
+                            .orElseThrow(() -> new RuntimeException("Estado ANULADA no configurado"));
+
+                    for (DetalleVenta dv : ventaCancel.getDetalles()) {
+                        Producto producto = dv.getProducto();
+                        int stockAnterior = producto.getStock();
+                        producto.setStock(stockAnterior + dv.getCantidad());
+                        productoRepository.save(producto);
+
+                        MovimientoInventario movimiento = MovimientoInventario.builder()
+                                .producto(producto)
+                                .usuario(pedido.getCliente())
+                                .tipoMovimiento(MovimientoInventario.TipoMovimiento.ENTRADA)
+                                .cantidad(dv.getCantidad())
+                                .stockAnterior(stockAnterior)
+                                .stockActual(producto.getStock())
+                                .descripcion("Devolución por cancelación de envío #" + envio.getIdEnvio())
+                                .build();
+                        movimientoRepository.save(movimiento);
+                    }
+
+                    ventaCancel.setEstadoVenta(anulada);
+                    ventaRepository.save(ventaCancel);
+                }
+                break;
         }
 
         SeguimientoEnvio seguimiento = SeguimientoEnvio.builder()
