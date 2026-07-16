@@ -32,12 +32,22 @@ import com.example.myapplication.ui.viewmodel.*
 fun CategoriaManagementScreen(viewModel: CategoriaViewModel, navController: NavController) {
     var showDialog by remember { mutableStateOf(false) }
     val categorias by viewModel.categorias.collectAsState()
+    val deleteError by viewModel.deleteError.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
     var dialogError by remember { mutableStateOf<String?>(null) }
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) { viewModel.loadCategorias() }
 
+    LaunchedEffect(deleteError) {
+        deleteError?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+            viewModel.clearDeleteError()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Gestión de Categorías") },
@@ -62,7 +72,8 @@ fun CategoriaManagementScreen(viewModel: CategoriaViewModel, navController: NavC
             }
         }
     ) { padding ->
-        if (categorias.isEmpty()) {
+        val categoriasActivas = categorias.filter { it.activo != false }
+        if (categoriasActivas.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
@@ -75,7 +86,7 @@ fun CategoriaManagementScreen(viewModel: CategoriaViewModel, navController: NavC
                 contentPadding = PaddingValues(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(categorias) { cat ->
+                items(categoriasActivas) { cat ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -146,11 +157,21 @@ fun CategoriaManagementScreen(viewModel: CategoriaViewModel, navController: NavC
 fun MarcaManagementScreen(viewModel: MarcaViewModel, navController: NavController) {
     var showDialog by remember { mutableStateOf(false) }
     val marcas by viewModel.marcas.collectAsState()
+    val deleteError by viewModel.deleteError.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
     var dialogError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) { viewModel.loadMarcas() }
 
+    LaunchedEffect(deleteError) {
+        deleteError?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+            viewModel.clearDeleteError()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Gestión de Marcas") },
@@ -175,7 +196,8 @@ fun MarcaManagementScreen(viewModel: MarcaViewModel, navController: NavControlle
             }
         }
     ) { padding ->
-        if (marcas.isEmpty()) {
+        val marcasActivas = marcas.filter { it.activo != false }
+        if (marcasActivas.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
@@ -188,7 +210,7 @@ fun MarcaManagementScreen(viewModel: MarcaViewModel, navController: NavControlle
                 contentPadding = PaddingValues(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(marcas) { marca ->
+                items(marcasActivas) { marca ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -253,12 +275,22 @@ fun MarcaManagementScreen(viewModel: MarcaViewModel, navController: NavControlle
 fun ProveedorManagementScreen(viewModel: ProveedorViewModel, navController: NavController) {
     var showDialog by remember { mutableStateOf(false) }
     val proveedores by viewModel.proveedores.collectAsState()
+    val deleteError by viewModel.deleteError.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
     var dialogError by remember { mutableStateOf<String?>(null) }
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) { viewModel.loadProveedores() }
 
+    LaunchedEffect(deleteError) {
+        deleteError?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+            viewModel.clearDeleteError()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Gestión de Proveedores") },
@@ -283,7 +315,8 @@ fun ProveedorManagementScreen(viewModel: ProveedorViewModel, navController: NavC
             }
         }
     ) { padding ->
-        if (proveedores.isEmpty()) {
+        val proveedoresActivos = proveedores.filter { it.activo != false }
+        if (proveedoresActivos.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
@@ -296,7 +329,7 @@ fun ProveedorManagementScreen(viewModel: ProveedorViewModel, navController: NavC
                 contentPadding = PaddingValues(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(proveedores) { prov ->
+                items(proveedoresActivos) { prov ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -326,6 +359,9 @@ fun ProveedorManagementScreen(viewModel: ProveedorViewModel, navController: NavC
         if (showDialog) {
             var nombre by remember { mutableStateOf("") }
             var ruc by remember { mutableStateOf("") }
+            var telefono by remember { mutableStateOf("") }
+            var correo by remember { mutableStateOf("") }
+            var direccion by remember { mutableStateOf("") }
             AlertDialog(
                 onDismissRequest = { showDialog = false; dialogError = null },
                 title = { Text("Nuevo Proveedor", fontWeight = FontWeight.SemiBold) },
@@ -333,8 +369,14 @@ fun ProveedorManagementScreen(viewModel: ProveedorViewModel, navController: NavC
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(value = nombre, onValueChange = { nombre = it; dialogError = null }, label = { Text("Razón Social *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-                        OutlinedTextField(value = ruc, onValueChange = { ruc = it; dialogError = null }, label = { Text("RUC *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done))
+                        OutlinedTextField(value = ruc, onValueChange = { if (it.length <= 11) ruc = it; dialogError = null }, label = { Text("RUC *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+                        OutlinedTextField(value = telefono, onValueChange = { if (it.length <= 11) telefono = it }, label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+                        OutlinedTextField(value = correo, onValueChange = { correo = it }, label = { Text("Correo") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+                        OutlinedTextField(value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done))
                         if (dialogError != null) {
                             Text(dialogError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                         }
@@ -349,7 +391,7 @@ fun ProveedorManagementScreen(viewModel: ProveedorViewModel, navController: NavC
                             if (faltantes.isNotEmpty()) {
                                 dialogError = "Complete todos los campos: ${faltantes.joinToString(", ")}"
                             } else {
-                                viewModel.createProveedor(Proveedor(razonSocial = nombre, ruc = ruc))
+                                viewModel.createProveedor(Proveedor(razonSocial = nombre, ruc = ruc, telefono = telefono, correo = correo, direccion = direccion))
                                 showDialog = false
                                 dialogError = null
                             }

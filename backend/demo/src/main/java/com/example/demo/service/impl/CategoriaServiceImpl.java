@@ -1,8 +1,10 @@
 package com.example.demo.service.impl;
 
+import com.example.demo.exception.BadRequestException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.model.Categoria;
 import com.example.demo.repository.CategoriaRepository;
+import com.example.demo.repository.ProductoRepository;
 import com.example.demo.service.CategoriaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import java.util.List;
 public class CategoriaServiceImpl implements CategoriaService {
 
     private final CategoriaRepository categoriaRepository;
+    private final ProductoRepository productoRepository;
 
     @Override
     public List<Categoria> listarTodas() {
@@ -43,6 +46,10 @@ public class CategoriaServiceImpl implements CategoriaService {
     @Override
     public void eliminar(Long id) {
         Categoria categoria = obtenerPorId(id);
+        if (productoRepository.countByCategoriaIdCategoria(id) > 0) {
+            throw new BadRequestException(
+                    "No se puede desactivar esta categoría porque tiene productos asociados.");
+        }
         categoria.setActivo(false);
         categoriaRepository.save(categoria);
     }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.model.*
 import com.example.myapplication.network.ApiService
+import com.example.myapplication.repository.HttpErrorParser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -12,6 +13,9 @@ import kotlinx.coroutines.launch
 class CategoriaViewModel(private val apiService: ApiService) : ViewModel() {
     private val _categorias = MutableStateFlow<List<Categoria>>(emptyList())
     val categorias: StateFlow<List<Categoria>> = _categorias
+
+    private val _deleteError = MutableStateFlow<String?>(null)
+    val deleteError: StateFlow<String?> = _deleteError
 
     fun loadCategorias() {
         viewModelScope.launch {
@@ -27,8 +31,18 @@ class CategoriaViewModel(private val apiService: ApiService) : ViewModel() {
 
     fun deleteCategoria(id: Long) {
         viewModelScope.launch {
-            try { apiService.deleteCategoria(id); loadCategorias() } catch (e: Exception) {}
+            try {
+                apiService.deleteCategoria(id)
+                loadCategorias()
+                _deleteError.value = null
+            } catch (e: Exception) {
+                _deleteError.value = HttpErrorParser.parse(e)
+            }
         }
+    }
+
+    fun clearDeleteError() {
+        _deleteError.value = null
     }
 }
 
@@ -36,6 +50,9 @@ class CategoriaViewModel(private val apiService: ApiService) : ViewModel() {
 class MarcaViewModel(private val apiService: ApiService) : ViewModel() {
     private val _marcas = MutableStateFlow<List<Marca>>(emptyList())
     val marcas: StateFlow<List<Marca>> = _marcas
+
+    private val _deleteError = MutableStateFlow<String?>(null)
+    val deleteError: StateFlow<String?> = _deleteError
 
     fun loadMarcas() {
         viewModelScope.launch {
@@ -51,8 +68,18 @@ class MarcaViewModel(private val apiService: ApiService) : ViewModel() {
 
     fun deleteMarca(id: Long) {
         viewModelScope.launch {
-            try { apiService.deleteMarca(id); loadMarcas() } catch (e: Exception) {}
+            try {
+                apiService.deleteMarca(id)
+                loadMarcas()
+                _deleteError.value = null
+            } catch (e: Exception) {
+                _deleteError.value = HttpErrorParser.parse(e)
+            }
         }
+    }
+
+    fun clearDeleteError() {
+        _deleteError.value = null
     }
 }
 
@@ -60,6 +87,9 @@ class MarcaViewModel(private val apiService: ApiService) : ViewModel() {
 class ProveedorViewModel(private val apiService: ApiService) : ViewModel() {
     private val _proveedores = MutableStateFlow<List<Proveedor>>(emptyList())
     val proveedores: StateFlow<List<Proveedor>> = _proveedores
+
+    private val _deleteError = MutableStateFlow<String?>(null)
+    val deleteError: StateFlow<String?> = _deleteError
 
     fun loadProveedores() {
         viewModelScope.launch {
@@ -75,7 +105,17 @@ class ProveedorViewModel(private val apiService: ApiService) : ViewModel() {
 
     fun deleteProveedor(id: Long) {
         viewModelScope.launch {
-            try { apiService.deleteProveedor(id); loadProveedores() } catch (e: Exception) {}
+            try {
+                apiService.deleteProveedor(id)
+                loadProveedores()
+                _deleteError.value = null
+            } catch (e: Exception) {
+                _deleteError.value = HttpErrorParser.parse(e)
+            }
         }
+    }
+
+    fun clearDeleteError() {
+        _deleteError.value = null
     }
 }

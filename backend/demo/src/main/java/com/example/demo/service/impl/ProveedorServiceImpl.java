@@ -1,8 +1,10 @@
 package com.example.demo.service.impl;
 
+import com.example.demo.exception.BadRequestException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.model.Proveedor;
 import com.example.demo.repository.ProveedorRepository;
+import com.example.demo.repository.ProductoRepository;
 import com.example.demo.service.ProveedorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import java.util.List;
 public class ProveedorServiceImpl implements ProveedorService {
 
     private final ProveedorRepository proveedorRepository;
+    private final ProductoRepository productoRepository;
 
     @Override
     public List<Proveedor> listarTodos() {
@@ -46,6 +49,10 @@ public class ProveedorServiceImpl implements ProveedorService {
     @Override
     public void eliminar(Long id) {
         Proveedor proveedor = obtenerPorId(id);
+        if (productoRepository.countByProveedorIdProveedor(id) > 0) {
+            throw new BadRequestException(
+                    "No se puede desactivar este proveedor porque tiene productos asociados.");
+        }
         proveedor.setActivo(false);
         proveedorRepository.save(proveedor);
     }

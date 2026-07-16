@@ -1,8 +1,10 @@
 package com.example.demo.service.impl;
 
+import com.example.demo.exception.BadRequestException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.model.Marca;
 import com.example.demo.repository.MarcaRepository;
+import com.example.demo.repository.ProductoRepository;
 import com.example.demo.service.MarcaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import java.util.List;
 public class MarcaServiceImpl implements MarcaService {
 
     private final MarcaRepository marcaRepository;
+    private final ProductoRepository productoRepository;
 
     @Override
     public List<Marca> listarTodas() {
@@ -43,6 +46,10 @@ public class MarcaServiceImpl implements MarcaService {
     @Override
     public void eliminar(Long id) {
         Marca marca = obtenerPorId(id);
+        if (productoRepository.countByMarcaIdMarca(id) > 0) {
+            throw new BadRequestException(
+                    "No se puede desactivar esta marca porque tiene productos asociados.");
+        }
         marca.setActivo(false);
         marcaRepository.save(marca);
     }

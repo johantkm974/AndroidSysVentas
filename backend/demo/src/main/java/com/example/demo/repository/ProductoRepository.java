@@ -12,4 +12,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
     List<Producto> findByProveedorIdProveedor(Long idProveedor);
     List<Producto> findByStockLessThanEqual(Integer stockMinimo);
     List<Producto> findByActivoTrue();
+    long countByCategoriaIdCategoria(Long idCategoria);
+    long countByMarcaIdMarca(Long idMarca);
+    long countByProveedorIdProveedor(Long idProveedor);
 }
