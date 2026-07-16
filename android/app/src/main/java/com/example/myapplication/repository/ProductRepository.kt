@@ -66,7 +66,7 @@ class ProductRepository(private val apiService: ApiService) {
             val response = apiService.createProduct(request)
             Result.success(response)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(HttpErrorParser.parse(e)))
         }
     }
 
@@ -84,7 +84,7 @@ class ProductRepository(private val apiService: ApiService) {
             val response = apiService.updateProduct(id, request)
             Result.success(response)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(HttpErrorParser.parse(e)))
         }
     }
 }

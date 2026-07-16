@@ -4,6 +4,7 @@ import com.example.demo.dto.ActualizarUsuarioRequest;
 import com.example.demo.dto.CrearUsuarioRequest;
 import com.example.demo.dto.UsuarioResponse;
 import com.example.demo.exception.BadRequestException;
+import com.example.demo.exception.ForbiddenException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.model.Credencial;
 import com.example.demo.model.Rol;
@@ -37,6 +38,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     public List<UsuarioResponse> listarTodos() {
         return usuarioRepository.findAll().stream()
+                .filter(Usuario::getActivo)
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -58,10 +60,10 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     @Transactional
     public UsuarioResponse crear(CrearUsuarioRequest request) {
-        if (usuarioRepository.existsByDni(request.getDni())) {
+        if (usuarioRepository.existsByDniAndActivoTrue(request.getDni())) {
             throw new BadRequestException("El DNI ya está registrado");
         }
-        if (credencialRepository.existsByCorreo(request.getCorreo())) {
+        if (credencialRepository.existsByCorreoAndActivoTrue(request.getCorreo())) {
             throw new BadRequestException("El correo ya está registrado");
         }
 
@@ -82,6 +84,7 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .activo(true)
                 .build();
         credencialRepository.save(credencial);
+        usuario.setCredencial(credencial);
 
         Set<UsuarioRol> usuariosRoles = new HashSet<>();
         for (Long idRol : request.getIdRoles()) {
@@ -132,8 +135,29 @@ public class UsuarioServiceImpl implements UsuarioService {
     public void eliminar(Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + id));
+
+        boolean esAdmin = usuario.getUsuariosRoles().stream()
+                .anyMatch(ur -> ur.getRol().getNombre().equals("ROLE_ADMIN"));
+
+        if (esAdmin) {
+            long adminsActivos = usuarioRepository.findAll().stream()
+                    .filter(Usuario::getActivo)
+                    .filter(u -> u.getUsuariosRoles().stream()
+                            .anyMatch(ur -> ur.getRol().getNombre().equals("ROLE_ADMIN")))
+                    .count();
+            if (adminsActivos <= 1) {
+                throw new ForbiddenException("No se puede eliminar el único administrador del sistema");
+            }
+        }
+
         usuario.setActivo(false);
         usuarioRepository.save(usuario);
+
+        Credencial credencial = usuario.getCredencial();
+        if (credencial != null) {
+            credencial.setActivo(false);
+            credencialRepository.save(credencial);
+        }
     }
 
     @Override

@@ -119,6 +119,9 @@ class VentaViewModel(private val repository: VentaRepository) : ViewModel() {
     private val _sales = MutableStateFlow<List<VentaResponse>>(emptyList())
     val sales: StateFlow<List<VentaResponse>> = _sales
 
+    private val _annulError = MutableStateFlow<String?>(null)
+    val annulError: StateFlow<String?> = _annulError
+
     fun loadSales() {
         viewModelScope.launch {
             repository.listSales().onSuccess { _sales.value = it }
@@ -136,8 +139,19 @@ class VentaViewModel(private val repository: VentaRepository) : ViewModel() {
 
     fun annulSale(id: Long) {
         viewModelScope.launch {
-            repository.cancelSale(id).onSuccess { loadSales() }
+            repository.cancelSale(id)
+                .onSuccess {
+                    _annulError.value = null
+                    loadSales()
+                }
+                .onFailure { error ->
+                    _annulError.value = error.message ?: "Error al anular venta"
+                }
         }
+    }
+
+    fun clearAnnulError() {
+        _annulError.value = null
     }
 }
 

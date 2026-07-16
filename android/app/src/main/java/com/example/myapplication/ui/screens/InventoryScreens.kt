@@ -219,6 +219,12 @@ fun AddProductScreen(
     var marcaExpanded by remember { mutableStateOf(false) }
     var proveedorExpanded by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var codigoError by remember { mutableStateOf<String?>(null) }
+    var nombreError by remember { mutableStateOf<String?>(null) }
+    var precioCompraError by remember { mutableStateOf<String?>(null) }
+    var precioVentaError by remember { mutableStateOf<String?>(null) }
+    var stockError by remember { mutableStateOf<String?>(null) }
+    var stockMinimoError by remember { mutableStateOf<String?>(null) }
 
     val categories by viewModel.categories.collectAsState()
     val marcas by viewModel.marcas.collectAsState()
@@ -232,22 +238,35 @@ fun AddProductScreen(
     }
 
     fun validate(): Boolean {
-        val camposFaltantes = mutableListOf<String>()
-        if (codigo.isBlank()) camposFaltantes.add("Código")
-        if (nombre.isBlank()) camposFaltantes.add("Nombre")
-        if (precioCompra.isBlank()) camposFaltantes.add("Precio Compra")
-        if (precioVenta.isBlank()) camposFaltantes.add("Precio Venta")
-        if (stock.isBlank()) camposFaltantes.add("Stock")
-        if (stockMinimo.isBlank()) camposFaltantes.add("Stock Mínimo")
-        if (selectedCategoria == null) camposFaltantes.add("Categoría")
-        if (selectedMarca == null) camposFaltantes.add("Marca")
-        if (selectedProveedor == null) camposFaltantes.add("Proveedor")
-        return if (camposFaltantes.isNotEmpty()) {
-            errorMessage = "Complete todos los campos: ${camposFaltantes.joinToString(", ")}"
-            false
-        } else {
-            errorMessage = null
-            true
+        var valid = true
+        if (codigo.isBlank()) { codigoError = "Campo obligatorio"; valid = false } else { codigoError = null }
+        if (nombre.isBlank()) { nombreError = "Campo obligatorio"; valid = false } else { nombreError = null }
+        if (precioCompra.isBlank()) { precioCompraError = "Campo obligatorio"; valid = false }
+        else if (precioCompra.toDoubleOrNull() == null) { precioCompraError = "Número inválido"; valid = false }
+        else { precioCompraError = null }
+        if (precioVenta.isBlank()) { precioVentaError = "Campo obligatorio"; valid = false }
+        else if (precioVenta.toDoubleOrNull() == null) { precioVentaError = "Número inválido"; valid = false }
+        else { precioVentaError = null }
+        if (stock.isBlank()) { stockError = "Campo obligatorio"; valid = false }
+        else if (stock.toIntOrNull() == null) { stockError = "Solo números enteros"; valid = false }
+        else { stockError = null }
+        if (stockMinimo.isBlank()) { stockMinimoError = "Campo obligatorio"; valid = false }
+        else if (stockMinimo.toIntOrNull() == null) { stockMinimoError = "Solo números enteros"; valid = false }
+        else { stockMinimoError = null }
+        if (selectedCategoria == null) { errorMessage = "Seleccione una categoría"; valid = false }
+        if (selectedMarca == null) { errorMessage = "Seleccione una marca"; valid = false }
+        if (selectedProveedor == null) { errorMessage = "Seleccione un proveedor"; valid = false }
+        if (valid) errorMessage = null
+        return valid
+    }
+
+    val createError by viewModel.createError.collectAsState()
+    val createSuccess by viewModel.createSuccess.collectAsState()
+
+    LaunchedEffect(createSuccess) {
+        if (createSuccess) {
+            viewModel.clearCreateState()
+            navController.popBackStack()
         }
     }
 
@@ -267,7 +286,6 @@ fun AddProductScreen(
             idProveedor = selectedProveedor!!.idProveedor!!
         )
         viewModel.createProduct(request)
-        navController.popBackStack()
     }
 
     Scaffold(
@@ -296,21 +314,27 @@ fun AddProductScreen(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedTextField(value = codigo, onValueChange = { codigo = it; errorMessage = null }, label = { Text("Código *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = codigo, onValueChange = { codigo = it; codigoError = null }, label = { Text("Código *") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                isError = codigoError != null, supportingText = codigoError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = nombre, onValueChange = { nombre = it; errorMessage = null }, label = { Text("Nombre *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = nombre, onValueChange = { nombre = it; nombreError = null }, label = { Text("Nombre *") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                isError = nombreError != null, supportingText = nombreError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
             OutlinedTextField(value = descripcion, onValueChange = { descripcion = it }, label = { Text("Descripción") }, modifier = Modifier.fillMaxWidth(), minLines = 3, shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = precioCompra, onValueChange = { precioCompra = it; errorMessage = null }, label = { Text("Precio Compra *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = precioCompra, onValueChange = { precioCompra = it.filter { c -> c.isDigit() || c == '.' }; precioCompraError = null }, label = { Text("Precio Compra *") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                isError = precioCompraError != null, supportingText = precioCompraError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = precioVenta, onValueChange = { precioVenta = it; errorMessage = null }, label = { Text("Precio Venta *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = precioVenta, onValueChange = { precioVenta = it.filter { c -> c.isDigit() || c == '.' }; precioVentaError = null }, label = { Text("Precio Venta *") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                isError = precioVentaError != null, supportingText = precioVentaError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = stock, onValueChange = { stock = it; errorMessage = null }, label = { Text("Stock *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = stock, onValueChange = { stock = it.filter { c -> c.isDigit() }; stockError = null }, label = { Text("Stock *") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                isError = stockError != null, supportingText = stockError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = stockMinimo, onValueChange = { stockMinimo = it; errorMessage = null }, label = { Text("Stock Mínimo *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = stockMinimo, onValueChange = { stockMinimo = it.filter { c -> c.isDigit() }; stockMinimoError = null }, label = { Text("Stock Mínimo *") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                isError = stockMinimoError != null, supportingText = stockMinimoError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = imagenUrl, onValueChange = { imagenUrl = it }, label = { Text("URL Imagen") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = imagenUrl, onValueChange = { imagenUrl = it }, label = { Text("URL Imagen") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
 
             ExposedDropdownMenuBox(
@@ -384,14 +408,15 @@ fun AddProductScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (errorMessage != null) {
+            val displayError = errorMessage ?: createError
+            if (displayError != null) {
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = errorMessage!!,
+                        text = displayError,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(12.dp),
                         style = MaterialTheme.typography.bodySmall
@@ -432,6 +457,12 @@ fun EditProductScreen(
     var marcaExpanded by remember { mutableStateOf(false) }
     var proveedorExpanded by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var codigoError by remember { mutableStateOf<String?>(null) }
+    var nombreError by remember { mutableStateOf<String?>(null) }
+    var precioCompraError by remember { mutableStateOf<String?>(null) }
+    var precioVentaError by remember { mutableStateOf<String?>(null) }
+    var stockError by remember { mutableStateOf<String?>(null) }
+    var stockMinimoError by remember { mutableStateOf<String?>(null) }
 
     val categories by viewModel.categories.collectAsState()
     val marcas by viewModel.marcas.collectAsState()
@@ -474,19 +505,32 @@ fun EditProductScreen(
     }
 
     fun validate(): Boolean {
-        val camposFaltantes = mutableListOf<String>()
-        if (codigo.isBlank()) camposFaltantes.add("Código")
-        if (nombre.isBlank()) camposFaltantes.add("Nombre")
-        if (precioCompra.isBlank()) camposFaltantes.add("Precio Compra")
-        if (precioVenta.isBlank()) camposFaltantes.add("Precio Venta")
-        if (stock.isBlank()) camposFaltantes.add("Stock")
-        if (stockMinimo.isBlank()) camposFaltantes.add("Stock Mínimo")
-        return if (camposFaltantes.isNotEmpty()) {
-            errorMessage = "Complete todos los campos: ${camposFaltantes.joinToString(", ")}"
-            false
-        } else {
-            errorMessage = null
-            true
+        var valid = true
+        if (codigo.isBlank()) { codigoError = "Campo obligatorio"; valid = false } else { codigoError = null }
+        if (nombre.isBlank()) { nombreError = "Campo obligatorio"; valid = false } else { nombreError = null }
+        if (precioCompra.isBlank()) { precioCompraError = "Campo obligatorio"; valid = false }
+        else if (precioCompra.toDoubleOrNull() == null) { precioCompraError = "Número inválido"; valid = false }
+        else { precioCompraError = null }
+        if (precioVenta.isBlank()) { precioVentaError = "Campo obligatorio"; valid = false }
+        else if (precioVenta.toDoubleOrNull() == null) { precioVentaError = "Número inválido"; valid = false }
+        else { precioVentaError = null }
+        if (stock.isBlank()) { stockError = "Campo obligatorio"; valid = false }
+        else if (stock.toIntOrNull() == null) { stockError = "Solo números enteros"; valid = false }
+        else { stockError = null }
+        if (stockMinimo.isBlank()) { stockMinimoError = "Campo obligatorio"; valid = false }
+        else if (stockMinimo.toIntOrNull() == null) { stockMinimoError = "Solo números enteros"; valid = false }
+        else { stockMinimoError = null }
+        if (valid) errorMessage = null
+        return valid
+    }
+
+    val createError by viewModel.createError.collectAsState()
+    val createSuccess by viewModel.createSuccess.collectAsState()
+
+    LaunchedEffect(createSuccess) {
+        if (createSuccess) {
+            viewModel.clearCreateState()
+            navController.popBackStack()
         }
     }
 
@@ -506,7 +550,6 @@ fun EditProductScreen(
             idProveedor = selectedProveedor?.idProveedor
         )
         viewModel.updateProduct(id, request)
-        navController.popBackStack()
     }
 
     Scaffold(
@@ -535,21 +578,27 @@ fun EditProductScreen(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedTextField(value = codigo, onValueChange = { codigo = it; errorMessage = null }, label = { Text("Código *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = codigo, onValueChange = { codigo = it; codigoError = null }, label = { Text("Código *") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                isError = codigoError != null, supportingText = codigoError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = nombre, onValueChange = { nombre = it; errorMessage = null }, label = { Text("Nombre *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = nombre, onValueChange = { nombre = it; nombreError = null }, label = { Text("Nombre *") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                isError = nombreError != null, supportingText = nombreError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
             OutlinedTextField(value = descripcion, onValueChange = { descripcion = it }, label = { Text("Descripción") }, modifier = Modifier.fillMaxWidth(), minLines = 3, shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = precioCompra, onValueChange = { precioCompra = it; errorMessage = null }, label = { Text("Precio Compra *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = precioCompra, onValueChange = { precioCompra = it.filter { c -> c.isDigit() || c == '.' }; precioCompraError = null }, label = { Text("Precio Compra *") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                isError = precioCompraError != null, supportingText = precioCompraError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = precioVenta, onValueChange = { precioVenta = it; errorMessage = null }, label = { Text("Precio Venta *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = precioVenta, onValueChange = { precioVenta = it.filter { c -> c.isDigit() || c == '.' }; precioVentaError = null }, label = { Text("Precio Venta *") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                isError = precioVentaError != null, supportingText = precioVentaError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = stock, onValueChange = { stock = it; errorMessage = null }, label = { Text("Stock *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = stock, onValueChange = { stock = it.filter { c -> c.isDigit() }; stockError = null }, label = { Text("Stock *") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                isError = stockError != null, supportingText = stockError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = stockMinimo, onValueChange = { stockMinimo = it; errorMessage = null }, label = { Text("Stock Mínimo *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = stockMinimo, onValueChange = { stockMinimo = it.filter { c -> c.isDigit() }; stockMinimoError = null }, label = { Text("Stock Mínimo *") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
+                isError = stockMinimoError != null, supportingText = stockMinimoError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = imagenUrl, onValueChange = { imagenUrl = it }, label = { Text("URL Imagen") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = imagenUrl, onValueChange = { imagenUrl = it }, label = { Text("URL Imagen") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
 
             ExposedDropdownMenuBox(
@@ -623,14 +672,15 @@ fun EditProductScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (errorMessage != null) {
+            val displayError = errorMessage ?: createError
+            if (displayError != null) {
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = errorMessage!!,
+                        text = displayError,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(12.dp),
                         style = MaterialTheme.typography.bodySmall

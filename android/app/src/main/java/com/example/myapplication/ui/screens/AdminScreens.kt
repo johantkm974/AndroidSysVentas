@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +21,7 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import android.util.Patterns
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -34,8 +36,17 @@ import com.example.myapplication.ui.viewmodel.DashboardViewModel
 @Composable
 fun UserManagementScreen(viewModel: UserViewModel, navController: NavController) {
     val users by viewModel.users.collectAsState()
+    val availableRoles by viewModel.availableRoles.collectAsState()
+    var searchDni by remember { mutableStateOf("") }
+    var selectedRole by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) { viewModel.loadUsers() }
+    LaunchedEffect(Unit) { viewModel.loadUsers(); viewModel.loadAvailableRoles() }
+
+    val filteredUsers = users.filter { user ->
+        val matchesDni = searchDni.isBlank() || user.dni.contains(searchDni)
+        val matchesRole = selectedRole == null || user.roles.contains(selectedRole)
+        matchesDni && matchesRole
+    }
 
     Scaffold(
         topBar = {
@@ -62,57 +73,94 @@ fun UserManagementScreen(viewModel: UserViewModel, navController: NavController)
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.padding(padding),
-            contentPadding = PaddingValues(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(users) { user ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+        Column(modifier = Modifier.padding(padding)) {
+            OutlinedTextField(
+                value = searchDni,
+                onValueChange = { searchDni = it },
+                placeholder = { Text("Buscar por DNI...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp)
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = selectedRole == null,
+                    onClick = { selectedRole = null },
+                    label = { Text("Todos") }
+                )
+                availableRoles.forEach { role ->
+                    FilterChip(
+                        selected = selectedRole == role.nombre,
+                        onClick = { selectedRole = if (selectedRole == role.nombre) null else role.nombre },
+                        label = { Text(role.descripcion ?: role.nombre) }
+                    )
+                }
+            }
+            LazyColumn(
+                contentPadding = PaddingValues(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(filteredUsers) { user ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.size(48.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Default.Person,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "${user.nombres} ${user.apellidos}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(user.correo, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("DNI: ${user.dni}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (!user.telefono.isNullOrBlank()) {
+                                    Text("Tel: ${user.telefono}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                if (!user.direccion.isNullOrBlank()) {
+                                    Text(user.direccion, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Text(
+                                    "Roles: ${user.roles.joinToString(", ")}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "${user.nombres} ${user.apellidos}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(user.correo, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                "Roles: ${user.roles.joinToString(", ")}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Row {
-                            IconButton(onClick = { navController.navigate(Screen.EditUser.createRoute(user.idUsuario)) }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
-                            }
-                            IconButton(onClick = { viewModel.deleteUser(user.idUsuario) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                            Row {
+                                IconButton(onClick = { navController.navigate(Screen.EditUser.createRoute(user.idUsuario)) }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
+                                }
+                                IconButton(onClick = { viewModel.deleteUser(user.idUsuario) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                                }
                             }
                         }
                     }
@@ -132,7 +180,11 @@ fun CreateUserScreen(viewModel: UserViewModel, navController: NavController) {
     var password by remember { mutableStateOf("") }
     var telefono by remember { mutableStateOf("") }
     var direccion by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var nombreError by remember { mutableStateOf<String?>(null) }
+    var apellidoError by remember { mutableStateOf<String?>(null) }
+    var dniError by remember { mutableStateOf<String?>(null) }
+    var correoError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
     val availableRoles by viewModel.availableRoles.collectAsState()
     val selectedRoles = remember { mutableStateListOf<Long>() }
     val focusManager = LocalFocusManager.current
@@ -140,20 +192,19 @@ fun CreateUserScreen(viewModel: UserViewModel, navController: NavController) {
     LaunchedEffect(Unit) { viewModel.loadAvailableRoles() }
 
     fun validate(): Boolean {
-        val faltantes = mutableListOf<String>()
-        if (nombres.isBlank()) faltantes.add("Nombres")
-        if (apellidos.isBlank()) faltantes.add("Apellidos")
-        if (dni.isBlank()) faltantes.add("DNI")
-        if (correo.isBlank()) faltantes.add("Correo")
-        else if (!correo.contains("@")) { errorMessage = "El correo debe contener @"; return false }
-        if (password.isBlank()) faltantes.add("Contraseña")
-        return if (faltantes.isNotEmpty()) {
-            errorMessage = "Complete todos los campos: ${faltantes.joinToString(", ")}"
-            false
-        } else {
-            errorMessage = null
-            true
-        }
+        var valid = true
+        if (nombres.isBlank()) { nombreError = "Campo obligatorio"; valid = false } else { nombreError = null }
+        if (apellidos.isBlank()) { apellidoError = "Campo obligatorio"; valid = false } else { apellidoError = null }
+        if (dni.isBlank()) { dniError = "Campo obligatorio"; valid = false }
+        else if (dni.length < 8) { dniError = "Debe tener al menos 8 dígitos"; valid = false }
+        else { dniError = null }
+        if (correo.isBlank()) { correoError = "Campo obligatorio"; valid = false }
+        else if (!Patterns.EMAIL_ADDRESS.matcher(correo).matches()) { correoError = "Correo inválido"; valid = false }
+        else { correoError = null }
+        if (password.isBlank()) { passwordError = "Campo obligatorio"; valid = false }
+        else if (password.length < 6) { passwordError = "Mínimo 6 caracteres"; valid = false }
+        else { passwordError = null }
+        return valid
     }
 
     fun submit() {
@@ -194,19 +245,24 @@ fun CreateUserScreen(viewModel: UserViewModel, navController: NavController) {
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedTextField(value = nombres, onValueChange = { nombres = it; errorMessage = null }, label = { Text("Nombres *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = nombres, onValueChange = { nombres = it; nombreError = null }, label = { Text("Nombres *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
+                isError = nombreError != null, supportingText = nombreError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = apellidos, onValueChange = { apellidos = it; errorMessage = null }, label = { Text("Apellidos *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = apellidos, onValueChange = { apellidos = it; apellidoError = null }, label = { Text("Apellidos *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
+                isError = apellidoError != null, supportingText = apellidoError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = dni, onValueChange = { dni = it; errorMessage = null }, label = { Text("DNI *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = dni, onValueChange = { dni = it.filter { c -> c.isDigit() }.take(8); dniError = null }, label = { Text("DNI *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
+                isError = dniError != null, supportingText = dniError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = correo, onValueChange = { correo = it; errorMessage = null }, label = { Text("Correo Electrónico *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = correo, onValueChange = { correo = it; correoError = null }, label = { Text("Correo Electrónico *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
+                isError = correoError != null, supportingText = correoError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = password, onValueChange = { password = it; errorMessage = null }, label = { Text("Contraseña *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = password, onValueChange = { password = it; passwordError = null }, label = { Text("Contraseña *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
+                isError = passwordError != null, supportingText = passwordError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = telefono, onValueChange = { telefono = it }, label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = telefono, onValueChange = { telefono = it.filter { c -> c.isDigit() }.take(9) }, label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { submit() }))
             Spacer(modifier = Modifier.height(12.dp))
             Text("Asignar Roles:", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -226,12 +282,6 @@ fun CreateUserScreen(viewModel: UserViewModel, navController: NavController) {
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-
-            if (errorMessage != null) {
-                Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    Text(text = errorMessage!!, color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
-                }
-            }
 
             Button(
                 onClick = { submit() },
@@ -253,7 +303,9 @@ fun EditUserScreen(id: Long, viewModel: UserViewModel, navController: NavControl
     var telefono by remember { mutableStateOf("") }
     var direccion by remember { mutableStateOf("") }
     var activo by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var nombreError by remember { mutableStateOf<String?>(null) }
+    var apellidoError by remember { mutableStateOf<String?>(null) }
+    var dniError by remember { mutableStateOf<String?>(null) }
     val availableRoles by viewModel.availableRoles.collectAsState()
     val selectedRoles = remember { mutableStateListOf<Long>() }
     val focusManager = LocalFocusManager.current
@@ -271,17 +323,13 @@ fun EditUserScreen(id: Long, viewModel: UserViewModel, navController: NavControl
     }
 
     fun validate(): Boolean {
-        val faltantes = mutableListOf<String>()
-        if (nombres.isBlank()) faltantes.add("Nombres")
-        if (apellidos.isBlank()) faltantes.add("Apellidos")
-        if (dni.isBlank()) faltantes.add("DNI")
-        return if (faltantes.isNotEmpty()) {
-            errorMessage = "Complete todos los campos: ${faltantes.joinToString(", ")}"
-            false
-        } else {
-            errorMessage = null
-            true
-        }
+        var valid = true
+        if (nombres.isBlank()) { nombreError = "Campo obligatorio"; valid = false } else { nombreError = null }
+        if (apellidos.isBlank()) { apellidoError = "Campo obligatorio"; valid = false } else { apellidoError = null }
+        if (dni.isBlank()) { dniError = "Campo obligatorio"; valid = false }
+        else if (dni.length < 8) { dniError = "Debe tener al menos 8 dígitos"; valid = false }
+        else { dniError = null }
+        return valid
     }
 
     fun submit() {
@@ -321,15 +369,18 @@ fun EditUserScreen(id: Long, viewModel: UserViewModel, navController: NavControl
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedTextField(value = nombres, onValueChange = { nombres = it; errorMessage = null }, label = { Text("Nombres *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = nombres, onValueChange = { nombres = it; nombreError = null }, label = { Text("Nombres *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
+                isError = nombreError != null, supportingText = nombreError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = apellidos, onValueChange = { apellidos = it; errorMessage = null }, label = { Text("Apellidos *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = apellidos, onValueChange = { apellidos = it; apellidoError = null }, label = { Text("Apellidos *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
+                isError = apellidoError != null, supportingText = apellidoError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = dni, onValueChange = { dni = it; errorMessage = null }, label = { Text("DNI *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = dni, onValueChange = { dni = it.filter { c -> c.isDigit() }.take(8); dniError = null }, label = { Text("DNI *") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
+                isError = dniError != null, supportingText = dniError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = telefono, onValueChange = { telefono = it }, label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = telefono, onValueChange = { telefono = it.filter { c -> c.isDigit() }.take(9) }, label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
-            OutlinedTextField(value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+            OutlinedTextField(value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { submit() }))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
                 Checkbox(checked = activo, onCheckedChange = { activo = it })
@@ -347,12 +398,6 @@ fun EditUserScreen(id: Long, viewModel: UserViewModel, navController: NavControl
                 ) {
                     Checkbox(checked = selectedRoles.contains(role.idRol), onCheckedChange = null)
                     Text(role.nombre, modifier = Modifier.padding(start = 8.dp))
-                }
-            }
-
-            if (errorMessage != null) {
-                Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    Text(text = errorMessage!!, color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
                 }
             }
 

@@ -86,18 +86,45 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
         }
     }
 
+    private val _createError = MutableStateFlow<String?>(null)
+    val createError: StateFlow<String?> = _createError
+
+    private val _createSuccess = MutableStateFlow(false)
+    val createSuccess: StateFlow<Boolean> = _createSuccess
+
     fun createProduct(request: ProductoRequest) {
+        _createError.value = null
+        _createSuccess.value = false
         viewModelScope.launch {
             repository.createProduct(request)
-                .onSuccess { loadAllProducts() }
+                .onSuccess {
+                    _createSuccess.value = true
+                    loadAllProducts()
+                }
+                .onFailure { error ->
+                    _createError.value = error.message ?: "Error al crear producto"
+                }
         }
     }
 
     fun updateProduct(id: Long, request: ProductoRequest) {
+        _createError.value = null
+        _createSuccess.value = false
         viewModelScope.launch {
             repository.updateProduct(id, request)
-                .onSuccess { loadAllProducts() }
+                .onSuccess {
+                    _createSuccess.value = true
+                    loadAllProducts()
+                }
+                .onFailure { error ->
+                    _createError.value = error.message ?: "Error al actualizar producto"
+                }
         }
+    }
+
+    fun clearCreateState() {
+        _createError.value = null
+        _createSuccess.value = false
     }
 
     suspend fun getProductById(id: Long): ProductoResponse? {

@@ -27,7 +27,7 @@ class VentaRepository(private val apiService: ApiService) {
             val response = apiService.cancelSale(id)
             Result.success(response)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(HttpErrorParser.parse(e)))
         }
     }
 }
