@@ -38,6 +38,8 @@ import com.example.myapplication.navigation.Screen
 import com.example.myapplication.ui.viewmodel.ProductUiState
 import com.example.myapplication.ui.viewmodel.ProductViewModel
 
+enum class FiltroActivo { TODOS, ACTIVOS, INACTIVOS }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InventoryManagementScreen(
@@ -51,8 +53,16 @@ fun InventoryManagementScreen(
     val uiState by viewModel.uiState.collectAsState()
     val categories by viewModel.categories.collectAsState()
     val selectedCategoryId by viewModel.selectedCategoryId.collectAsState()
+    val createError by viewModel.createError.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var filtroActivo by remember { mutableStateOf(FiltroActivo.TODOS) }
+
+    LaunchedEffect(createError) {
+        createError?.let { snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long) }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Gestión de Inventario") },
@@ -82,7 +92,30 @@ fun InventoryManagementScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = filtroActivo == FiltroActivo.TODOS,
+                    onClick = { filtroActivo = FiltroActivo.TODOS },
+                    label = { Text("Todos") }
+                )
+                FilterChip(
+                    selected = filtroActivo == FiltroActivo.ACTIVOS,
+                    onClick = { filtroActivo = FiltroActivo.ACTIVOS },
+                    label = { Text("Activos") }
+                )
+                FilterChip(
+                    selected = filtroActivo == FiltroActivo.INACTIVOS,
+                    onClick = { filtroActivo = FiltroActivo.INACTIVOS },
+                    label = { Text("Inactivos") }
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChip(
@@ -108,7 +141,12 @@ fun InventoryManagementScreen(
                     }
                 }
                 is ProductUiState.Success -> {
-                    val products = (uiState as ProductUiState.Success).products
+                    val allProducts = (uiState as ProductUiState.Success).products
+                    val products = when (filtroActivo) {
+                        FiltroActivo.TODOS -> allProducts
+                        FiltroActivo.ACTIVOS -> allProducts.filter { it.activo }
+                        FiltroActivo.INACTIVOS -> allProducts.filter { !it.activo }
+                    }
                     LazyColumn(
                         contentPadding = PaddingValues(12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -117,7 +155,8 @@ fun InventoryManagementScreen(
                             InventoryProductItem(
                                 product = product,
                                 onDelete = { viewModel.deleteProduct(product.idProducto) },
-                                onEdit = { navController.navigate(Screen.EditProduct.createRoute(product.idProducto)) }
+                                onEdit = { navController.navigate(Screen.EditProduct.createRoute(product.idProducto)) },
+                                onDeletePermanently = { viewModel.deleteProductPermanently(product.idProducto) }
                             )
                         }
                     }
@@ -139,11 +178,13 @@ fun InventoryManagementScreen(
 }
 
 @Composable
-fun InventoryProductItem(product: ProductoResponse, onDelete: () -> Unit, onEdit: () -> Unit) {
+fun InventoryProductItem(product: ProductoResponse, onDelete: () -> Unit, onEdit: () -> Unit, onDeletePermanently: (() -> Unit)? = null) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = if (product.activo) CardDefaults.cardColors()
+                else CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
         Row(
             modifier = Modifier
@@ -153,7 +194,8 @@ fun InventoryProductItem(product: ProductoResponse, onDelete: () -> Unit, onEdit
         ) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
+                color = if (product.activo) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.errorContainer,
                 modifier = Modifier.size(56.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -168,7 +210,8 @@ fun InventoryProductItem(product: ProductoResponse, onDelete: () -> Unit, onEdit
                         Icon(
                             Icons.Default.Inventory,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = if (product.activo) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -176,7 +219,23 @@ fun InventoryProductItem(product: ProductoResponse, onDelete: () -> Unit, onEdit
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(product.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(product.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = if (product.activo) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.errorContainer
+                    ) {
+                        Text(
+                            if (product.activo) "Activo" else "Inactivo",
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            color = if (product.activo) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
                 Text("Código: ${product.codigo}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row {
                     Text("Stock: ${product.stock}", style = MaterialTheme.typography.bodySmall,
@@ -190,8 +249,16 @@ fun InventoryProductItem(product: ProductoResponse, onDelete: () -> Unit, onEdit
                 IconButton(onClick = onEdit) {
                     Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
                 }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                if (product.activo) {
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, contentDescription = "Desactivar", tint = MaterialTheme.colorScheme.error)
+                    }
+                } else {
+                    onDeletePermanently?.let {
+                        IconButton(onClick = it) {
+                            Icon(Icons.Default.Delete, contentDescription = "Eliminar permanentemente", tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
                 }
             }
         }
@@ -463,6 +530,7 @@ fun EditProductScreen(
     var precioVentaError by remember { mutableStateOf<String?>(null) }
     var stockError by remember { mutableStateOf<String?>(null) }
     var stockMinimoError by remember { mutableStateOf<String?>(null) }
+    var activo by remember { mutableStateOf(true) }
 
     val categories by viewModel.categories.collectAsState()
     val marcas by viewModel.marcas.collectAsState()
@@ -487,6 +555,7 @@ fun EditProductScreen(
             stockMinimo = product.stockMinimo.toString()
             descripcion = product.descripcion ?: ""
             imagenUrl = product.imagen ?: ""
+            activo = product.activo
             productLoaded = true
         }
     }
@@ -545,6 +614,7 @@ fun EditProductScreen(
             stock = stock.toIntOrNull() ?: 0,
             stockMinimo = stockMinimo.toIntOrNull() ?: 0,
             imagen = if (imagenUrl.isBlank()) null else imagenUrl,
+            activo = activo,
             idCategoria = selectedCategoria?.idCategoria,
             idMarca = selectedMarca?.idMarca,
             idProveedor = selectedProveedor?.idProveedor
@@ -600,6 +670,14 @@ fun EditProductScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
             OutlinedTextField(value = imagenUrl, onValueChange = { imagenUrl = it }, label = { Text("URL Imagen") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next), keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }))
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Producto activo", modifier = Modifier.weight(1f))
+                Switch(checked = activo, onCheckedChange = { activo = it })
+            }
 
             ExposedDropdownMenuBox(
                 expanded = categoriaExpanded,

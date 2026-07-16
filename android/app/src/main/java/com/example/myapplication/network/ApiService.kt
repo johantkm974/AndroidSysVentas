@@ -46,6 +46,9 @@ interface ApiService {
     @GET("productos/categoria/{idCategoria}")
     suspend fun listProductsByCategory(@Path("idCategoria") idCategoria: Long): List<ProductoResponse>
 
+    @GET("productos/activos")
+    suspend fun listActiveProducts(): List<ProductoResponse>
+
     @GET("productos/stock-bajo")
     suspend fun lowStockProducts(): List<ProductoResponse>
     
@@ -57,6 +60,9 @@ interface ApiService {
     
     @DELETE("productos/{id}")
     suspend fun deleteProduct(@Path("id") id: Long)
+
+    @DELETE("productos/{id}/permanente")
+    suspend fun deleteProductPermanently(@Path("id") id: Long)
     
     // Categorías
     @GET("categorias")

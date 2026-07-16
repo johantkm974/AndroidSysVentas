@@ -35,6 +35,7 @@ sealed class Screen(val route: String) {
     object CategoriaManagement : Screen("categoria_management")
     object MarcaManagement : Screen("marca_management")
     object ProveedorManagement : Screen("proveedor_management")
+    object Register : Screen("register")
 }
 
 @Composable
@@ -59,6 +60,7 @@ fun NavGraph(
         composable(Screen.Login.route) {
             LoginScreen(
                 viewModel = loginViewModel,
+                navController = navController,
                 onLoginSuccess = { roles ->
                     val destination = when {
                         roles.contains("ROLE_ADMIN") -> Screen.AdminHome.route
@@ -114,6 +116,7 @@ fun NavGraph(
         composable(Screen.CategoriaManagement.route) { CategoriaManagementScreen(categoriaViewModel, navController) }
         composable(Screen.MarcaManagement.route) { MarcaManagementScreen(marcaViewModel, navController) }
         composable(Screen.ProveedorManagement.route) { ProveedorManagementScreen(proveedorViewModel, navController) }
+        composable(Screen.Register.route) { RegisterScreen(loginViewModel, navController) }
         composable(Screen.ProductList.route) { 
             ProductListScreen(productViewModel, cartViewModel, navController, onLogout) 
         }

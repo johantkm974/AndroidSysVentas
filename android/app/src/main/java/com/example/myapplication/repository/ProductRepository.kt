@@ -43,6 +43,15 @@ class ProductRepository(private val apiService: ApiService) {
         }
     }
 
+    suspend fun listActiveProducts(): Result<List<ProductoResponse>> {
+        return try {
+            val response = apiService.listActiveProducts()
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun listCategories(): Result<List<com.example.myapplication.model.Categoria>> {
         return try {
             val response = apiService.listCategorias()
@@ -75,7 +84,16 @@ class ProductRepository(private val apiService: ApiService) {
             apiService.deleteProduct(id)
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(HttpErrorParser.parse(e)))
+        }
+    }
+
+    suspend fun deleteProductPermanently(id: Long): Result<Unit> {
+        return try {
+            apiService.deleteProductPermanently(id)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(Exception(HttpErrorParser.parse(e)))
         }
     }
 

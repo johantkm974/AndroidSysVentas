@@ -58,6 +58,16 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
         viewModelScope.launch { loadAllProducts() }
     }
 
+    fun loadActiveProducts() {
+        _selectedCategoryId.value = null
+        viewModelScope.launch {
+            _uiState.value = ProductUiState.Loading
+            repository.listActiveProducts()
+                .onSuccess { products -> _uiState.value = ProductUiState.Success(products) }
+                .onFailure { error -> _uiState.value = ProductUiState.Error(error.message ?: "Error al cargar productos") }
+        }
+    }
+
     fun loadProductsByCategory(categoryId: Long?) {
         _selectedCategoryId.value = categoryId
         viewModelScope.launch {
@@ -83,6 +93,16 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
         viewModelScope.launch {
             repository.deleteProduct(id)
                 .onSuccess { loadAllProducts() }
+        }
+    }
+
+    fun deleteProductPermanently(id: Long) {
+        viewModelScope.launch {
+            repository.deleteProductPermanently(id)
+                .onSuccess { loadAllProducts() }
+                .onFailure { error ->
+                    _createError.value = error.message ?: "Error al eliminar permanentemente"
+                }
         }
     }
 

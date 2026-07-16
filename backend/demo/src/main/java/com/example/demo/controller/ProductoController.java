@@ -39,6 +39,11 @@ public class ProductoController {
         return ResponseEntity.ok(productoService.buscarPorCategoria(idCategoria));
     }
 
+    @GetMapping("/activos")
+    public ResponseEntity<List<ProductoResponse>> listarActivos() {
+        return ResponseEntity.ok(productoService.listarActivos());
+    }
+
     @GetMapping("/stock-bajo")
     @PreAuthorize("hasAnyRole('ADMIN', 'ALMACENERO')")
     public ResponseEntity<List<ProductoResponse>> stockBajo() {
@@ -61,6 +66,13 @@ public class ProductoController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         productoService.eliminar(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/permanente")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> eliminarPermanentemente(@PathVariable Long id) {
+        productoService.eliminarPermanentemente(id);
         return ResponseEntity.noContent().build();
     }
 }

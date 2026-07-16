@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.datastore.SessionManager
 import com.example.myapplication.model.LoginRequest
+import com.example.myapplication.model.RegisterRequest
 import com.example.myapplication.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,8 +25,25 @@ class LoginViewModel(
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState: StateFlow<LoginUiState> = _uiState
 
+    private val _registerState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
+    val registerState: StateFlow<LoginUiState> = _registerState
+
     fun resetState() {
         _uiState.value = LoginUiState.Idle
+        _registerState.value = LoginUiState.Idle
+    }
+
+    fun register(request: RegisterRequest) {
+        viewModelScope.launch {
+            _registerState.value = LoginUiState.Loading
+            repository.register(request)
+                .onSuccess {
+                    _registerState.value = LoginUiState.Success(emptyList())
+                }
+                .onFailure { error ->
+                    _registerState.value = LoginUiState.Error(error.message ?: "Error al registrarse")
+                }
+        }
     }
 
     fun login(correo: String, pass: String) {

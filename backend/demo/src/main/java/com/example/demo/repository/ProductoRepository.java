@@ -11,4 +11,5 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
     List<Producto> findByMarcaIdMarca(Long idMarca);
     List<Producto> findByProveedorIdProveedor(Long idProveedor);
     List<Producto> findByStockLessThanEqual(Integer stockMinimo);
+    List<Producto> findByActivoTrue();
 }

@@ -35,7 +35,7 @@ fun ProductListScreen(
     onLogout: () -> Unit
 ) {
     LaunchedEffect(Unit) {
-        viewModel.loadProducts()
+        viewModel.loadActiveProducts()
         viewModel.loadCategories()
     }
     val uiState by viewModel.uiState.collectAsState()
@@ -84,7 +84,7 @@ fun ProductListScreen(
                 ) {
                     FilterChip(
                         selected = selectedCategoryId == null,
-                        onClick = { viewModel.loadProducts() },
+                        onClick = { viewModel.loadActiveProducts() },
                         label = { Text("Todas") }
                     )
                     categories.forEach { cat ->

@@ -8,6 +8,7 @@ import com.example.demo.model.*;
 import com.example.demo.repository.*;
 import com.example.demo.service.ProductoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -106,6 +107,9 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setStock(request.getStock() != null ? request.getStock() : producto.getStock());
         producto.setStockMinimo(request.getStockMinimo() != null ? request.getStockMinimo() : producto.getStockMinimo());
         producto.setImagen(request.getImagen());
+        if (request.getActivo() != null) {
+            producto.setActivo(request.getActivo());
+        }
 
         return toResponse(productoRepository.save(producto));
     }
@@ -116,6 +120,22 @@ public class ProductoServiceImpl implements ProductoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado: " + id));
         producto.setActivo(false);
         productoRepository.save(producto);
+    }
+
+    @Override
+    public void eliminarPermanentemente(Long id) {
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado: " + id));
+        if (producto.getActivo()) {
+            throw new BadRequestException("No se puede eliminar permanentemente un producto activo. Desactívelo primero.");
+        }
+        try {
+            productoRepository.delete(producto);
+        } catch (DataIntegrityViolationException e) {
+            throw new BadRequestException(
+                    "Este producto no se puede eliminar porque ya está asociado a una o más ventas. " +
+                    "Puedes desactivarlo para que no aparezca en el catálogo de compra.");
+        }
     }
 
     @Override
@@ -140,6 +160,13 @@ public class ProductoServiceImpl implements ProductoService {
     public List<ProductoResponse> productosConStockBajo() {
         return productoRepository.findByStockLessThanEqual(5).stream()
                 .map(this::toResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ProductoResponse> listarActivos() {
+        return productoRepository.findByActivoTrue().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     private ProductoResponse toResponse(Producto p) {

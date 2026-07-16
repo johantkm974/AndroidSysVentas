@@ -21,6 +21,7 @@ public class ProductoRequest {
     private Integer stock;
     private Integer stockMinimo;
     private String imagen;
+    private Boolean activo;
     private Long idCategoria;
     private Long idMarca;
     private Long idProveedor;

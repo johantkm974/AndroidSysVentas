@@ -20,11 +20,13 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.viewmodel.LoginUiState
 import com.example.myapplication.ui.viewmodel.LoginViewModel
+import androidx.navigation.NavController
 
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
-    onLoginSuccess: (List<String>) -> Unit
+    onLoginSuccess: (List<String>) -> Unit,
+    navController: NavController? = null
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -143,6 +145,13 @@ fun LoginScreen(
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(
+                        onClick = { navController?.navigate("register") },
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) {
+                        Text("¿No tienes cuenta? Regístrate", fontWeight = FontWeight.Medium)
                     }
                 }
             }

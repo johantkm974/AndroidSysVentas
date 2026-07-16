@@ -11,8 +11,10 @@ public interface ProductoService {
     ProductoResponse crear(ProductoRequest request);
     ProductoResponse actualizar(Long id, ProductoRequest request);
     void eliminar(Long id);
+    void eliminarPermanentemente(Long id);
     List<ProductoResponse> buscarPorCategoria(Long idCategoria);
     List<ProductoResponse> buscarPorMarca(Long idMarca);
     List<ProductoResponse> buscarPorProveedor(Long idProveedor);
     List<ProductoResponse> productosConStockBajo();
+    List<ProductoResponse> listarActivos();
 }

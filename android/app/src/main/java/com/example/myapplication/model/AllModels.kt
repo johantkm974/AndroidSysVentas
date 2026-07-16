@@ -107,6 +107,7 @@ data class ProductoRequest(
     val stock: Int,
     val stockMinimo: Int,
     val imagen: String?,
+    val activo: Boolean? = null,
     val idCategoria: Long? = null,
     val idMarca: Long? = null,
     val idProveedor: Long? = null
