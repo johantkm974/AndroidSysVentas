@@ -116,7 +116,9 @@ data class ProductoRequest(
 // --- Orders & Sales ---
 data class PedidoRequest(
     val items: List<ItemPedido>,
-    val observacion: String? = null
+    val observacion: String? = null,
+    val direccion: String? = null,
+    val distrito: String? = null
 )
 
 data class ItemPedido(
@@ -197,4 +199,35 @@ data class ProductoStockBajo(
     val codigo: String,
     val stock: Int,
     val stockMinimo: Int
+)
+
+// --- Envíos ---
+data class EnvioResponse(
+    val idEnvio: Long,
+    val direccion: String,
+    val distrito: String,
+    val referencia: String?,
+    val estadoEnvio: EstadoEnvioResponse?,
+    val repartidor: String?,
+    val fechaEnvio: String?,
+    val fechaEntrega: String?,
+    val createdAt: String?
+)
+
+data class EstadoEnvioResponse(
+    val idEstadoEnvio: Long,
+    val nombre: String,
+    val descripcion: String?
+)
+
+data class SeguimientoResponse(
+    val idSeguimiento: Long,
+    val estadoEnvio: EstadoEnvioResponse?,
+    val observacion: String?,
+    val createdAt: String?
+)
+
+data class ActualizarEstadoEnvioRequest(
+    val idEstadoEnvio: Long,
+    val observacion: String?
 )

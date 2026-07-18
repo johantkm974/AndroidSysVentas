@@ -37,6 +37,15 @@ class CartViewModel(private val repository: OrderRepository) : ViewModel() {
     private val _checkoutState = MutableStateFlow<CheckoutState>(CheckoutState.Idle)
     val checkoutState: StateFlow<CheckoutState> = _checkoutState
 
+    private val _direccion = MutableStateFlow("")
+    val direccion: StateFlow<String> = _direccion
+
+    private val _distrito = MutableStateFlow("")
+    val distrito: StateFlow<String> = _distrito
+
+    fun updateDireccion(value: String) { _direccion.value = value }
+    fun updateDistrito(value: String) { _distrito.value = value }
+
     fun resetCheckoutState() {
         _checkoutState.value = CheckoutState.Idle
     }
@@ -65,14 +74,27 @@ class CartViewModel(private val repository: OrderRepository) : ViewModel() {
             _checkoutState.value = CheckoutState.Error("El carrito está vacío")
             return
         }
+        if (_direccion.value.isBlank() || _distrito.value.isBlank()) {
+            _checkoutState.value = CheckoutState.Error("Debes ingresar dirección y distrito de envío")
+            return
+        }
         _checkoutState.value = CheckoutState.SimulatingPayment
         val items = _cartItems.value.map { ItemPedido(it.product.idProducto, it.quantity) }
         viewModelScope.launch {
             delay(2500)
             _checkoutState.value = CheckoutState.Loading
-            repository.createOrder(PedidoRequest(items, observacion))
+            repository.createOrder(
+                PedidoRequest(
+                    items = items,
+                    observacion = observacion.ifBlank { null },
+                    direccion = _direccion.value,
+                    distrito = _distrito.value
+                )
+            )
                 .onSuccess {
                     _cartItems.value = emptyList()
+                    _direccion.value = ""
+                    _distrito.value = ""
                     _checkoutState.value = CheckoutState.Success
                 }
                 .onFailure { error ->

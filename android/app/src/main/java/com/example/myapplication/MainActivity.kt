@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
         val userRepository = UserRepository(apiService)
         val orderRepository = OrderRepository(apiService)
         val ventaRepository = VentaRepository(apiService)
+        val deliveryRepository = DeliveryRepository(apiService)
 
         setContent {
             MyApplicationTheme {
@@ -46,13 +47,14 @@ class MainActivity : ComponentActivity() {
                     val loginViewModel: LoginViewModel = viewModel(factory = createFactory { LoginViewModel(authRepository, sessionManager) })
                     val userViewModel: UserViewModel = viewModel(factory = createFactory { UserViewModel(userRepository) })
                     val productViewModel: ProductViewModel = viewModel(factory = createFactory { ProductViewModel(productRepository) })
-                    val orderViewModel: OrderViewModel = viewModel(factory = createFactory { OrderViewModel(orderRepository, ventaRepository) })
+                    val orderViewModel: OrderViewModel = viewModel(factory = createFactory { OrderViewModel(orderRepository, ventaRepository, deliveryRepository, userRepository) })
                     val dashboardViewModel: DashboardViewModel = viewModel(factory = createFactory { DashboardViewModel(apiService) })
                     val categoriaViewModel: CategoriaViewModel = viewModel(factory = createFactory { CategoriaViewModel(apiService) })
                     val marcaViewModel: MarcaViewModel = viewModel(factory = createFactory { MarcaViewModel(apiService) })
                     val proveedorViewModel: ProveedorViewModel = viewModel(factory = createFactory { ProveedorViewModel(apiService) })
                     val cartViewModel: CartViewModel = viewModel(factory = createFactory { CartViewModel(orderRepository) })
                     val ventaViewModel: VentaViewModel = viewModel(factory = createFactory { VentaViewModel(ventaRepository) })
+                    val deliveryViewModel: DeliveryViewModel = viewModel(factory = createFactory { DeliveryViewModel(deliveryRepository) })
 
                     NavGraph(
                         navController = navController,
@@ -66,6 +68,7 @@ class MainActivity : ComponentActivity() {
                         proveedorViewModel = proveedorViewModel,
                         cartViewModel = cartViewModel,
                         ventaViewModel = ventaViewModel,
+                        deliveryViewModel = deliveryViewModel,
                         onLogout = {
                             loginViewModel.resetState()
                             MainScope().launch {

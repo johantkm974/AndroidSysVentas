@@ -1,6 +1,9 @@
 package com.example.demo.service.impl;
 
 import com.example.demo.dto.EnvioRequest;
+import com.example.demo.dto.EnvioResponse;
+import com.example.demo.dto.EstadoEnvioDto;
+import com.example.demo.dto.SeguimientoResponse;
 import com.example.demo.exception.BadRequestException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.model.*;
@@ -10,7 +13,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,27 +31,32 @@ public class EnvioServiceImpl implements EnvioService {
     private final EstadoVentaRepository estadoVentaRepository;
     private final ProductoRepository productoRepository;
     private final MovimientoInventarioRepository movimientoRepository;
+    private final UsuarioRepository usuarioRepository;
 
     @Override
-    public List<Envio> listarTodos() {
-        return envioRepository.findAll();
+    public List<EnvioResponse> listarTodos() {
+        return envioRepository.findAll().stream()
+                .map(this::toEnvioResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public Envio obtenerPorId(Long id) {
-        return envioRepository.findById(id)
+    public EnvioResponse obtenerPorId(Long id) {
+        Envio envio = envioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Envío no encontrado: " + id));
+        return toEnvioResponse(envio);
     }
 
     @Override
-    public Envio obtenerPorPedido(Long idPedido) {
-        return envioRepository.findByPedidoIdPedido(idPedido)
+    public EnvioResponse obtenerPorPedido(Long idPedido) {
+        Envio envio = envioRepository.findByPedidoIdPedido(idPedido)
                 .orElseThrow(() -> new ResourceNotFoundException("Envío no encontrado para el pedido: " + idPedido));
+        return toEnvioResponse(envio);
     }
 
     @Override
     @Transactional
-    public Envio crear(EnvioRequest request) {
+    public EnvioResponse crear(EnvioRequest request) {
         Pedido pedido = pedidoRepository.findById(request.getIdPedido())
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
 
@@ -73,12 +84,12 @@ public class EnvioServiceImpl implements EnvioService {
                 .build();
         seguimientoRepository.save(seguimiento);
 
-        return envio;
+        return toEnvioResponse(envio);
     }
 
     @Override
     @Transactional
-    public Envio actualizarEstado(Long idEnvio, Long idEstadoEnvio, String observacion) {
+    public EnvioResponse actualizarEstado(Long idEnvio, Long idEstadoEnvio, String observacion) {
         Envio envio = envioRepository.findById(idEnvio)
                 .orElseThrow(() -> new ResourceNotFoundException("Envío no encontrado: " + idEnvio));
 
@@ -90,7 +101,7 @@ public class EnvioServiceImpl implements EnvioService {
 
         switch (nuevoEstado.getNombre()) {
             case "EN_RUTA":
-                envio.setFechaEnvio(java.time.LocalDateTime.now());
+                envio.setFechaEnvio(LocalDateTime.now());
                 EstadoPedido enviado = estadoPedidoRepository.findByNombre("ENVIADO")
                         .orElseThrow(() -> new RuntimeException("Estado ENVIADO no configurado"));
                 pedido.setEstadoPedido(enviado);
@@ -98,7 +109,7 @@ public class EnvioServiceImpl implements EnvioService {
                 break;
 
             case "ENTREGADO":
-                envio.setFechaEntrega(java.time.LocalDateTime.now());
+                envio.setFechaEntrega(LocalDateTime.now());
                 EstadoPedido entregado = estadoPedidoRepository.findByNombre("ENTREGADO")
                         .orElseThrow(() -> new RuntimeException("Estado ENTREGADO no configurado"));
                 pedido.setEstadoPedido(entregado);
@@ -155,11 +166,87 @@ public class EnvioServiceImpl implements EnvioService {
                 .build();
         seguimientoRepository.save(seguimiento);
 
-        return envioRepository.save(envio);
+        return toEnvioResponse(envioRepository.save(envio));
     }
 
     @Override
-    public List<SeguimientoEnvio> obtenerTracking(Long idEnvio) {
-        return seguimientoRepository.findByEnvioIdEnvioOrderByCreatedAtDesc(idEnvio);
+    public List<SeguimientoResponse> obtenerTracking(Long idEnvio) {
+        return seguimientoRepository.findByEnvioIdEnvioOrderByCreatedAtDesc(idEnvio).stream()
+                .map(this::toSeguimientoResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<EnvioResponse> listarPorRepartidor(Long idRepartidor) {
+        return envioRepository.findByRepartidorIdUsuario(idRepartidor).stream()
+                .map(this::toEnvioResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public EnvioResponse asignarRepartidor(Long idEnvio, Long idRepartidor) {
+        Envio envio = envioRepository.findById(idEnvio)
+                .orElseThrow(() -> new ResourceNotFoundException("Envío no encontrado: " + idEnvio));
+
+        Usuario repartidor = usuarioRepository.findById(idRepartidor)
+                .orElseThrow(() -> new ResourceNotFoundException("Repartidor no encontrado: " + idRepartidor));
+
+        envio.setRepartidor(repartidor);
+
+        SeguimientoEnvio seguimiento = SeguimientoEnvio.builder()
+                .envio(envio)
+                .estadoEnvio(envio.getEstadoEnvio())
+                .observacion("Repartidor asignado: " + repartidor.getNombres() + " " + repartidor.getApellidos())
+                .build();
+        seguimientoRepository.save(seguimiento);
+
+        return toEnvioResponse(envioRepository.save(envio));
+    }
+
+    private EnvioResponse toEnvioResponse(Envio envio) {
+        EstadoEnvioDto estadoDto = null;
+        if (envio.getEstadoEnvio() != null) {
+            estadoDto = EstadoEnvioDto.builder()
+                    .idEstadoEnvio(envio.getEstadoEnvio().getIdEstadoEnvio())
+                    .nombre(envio.getEstadoEnvio().getNombre())
+                    .descripcion(envio.getEstadoEnvio().getDescripcion())
+                    .build();
+        }
+
+        String repartidorNombre = null;
+        if (envio.getRepartidor() != null) {
+            repartidorNombre = envio.getRepartidor().getNombres() + " " + envio.getRepartidor().getApellidos();
+        }
+
+        return EnvioResponse.builder()
+                .idEnvio(envio.getIdEnvio())
+                .direccion(envio.getDireccion())
+                .distrito(envio.getDistrito())
+                .referencia(envio.getReferencia())
+                .estadoEnvio(estadoDto)
+                .repartidor(repartidorNombre)
+                .fechaEnvio(envio.getFechaEnvio() != null ? envio.getFechaEnvio().toString() : null)
+                .fechaEntrega(envio.getFechaEntrega() != null ? envio.getFechaEntrega().toString() : null)
+                .createdAt(envio.getCreatedAt() != null ? envio.getCreatedAt().toString() : null)
+                .build();
+    }
+
+    private SeguimientoResponse toSeguimientoResponse(SeguimientoEnvio seg) {
+        EstadoEnvioDto estadoDto = null;
+        if (seg.getEstadoEnvio() != null) {
+            estadoDto = EstadoEnvioDto.builder()
+                    .idEstadoEnvio(seg.getEstadoEnvio().getIdEstadoEnvio())
+                    .nombre(seg.getEstadoEnvio().getNombre())
+                    .descripcion(seg.getEstadoEnvio().getDescripcion())
+                    .build();
+        }
+
+        return SeguimientoResponse.builder()
+                .idSeguimiento(seg.getIdSeguimiento())
+                .estadoEnvio(estadoDto)
+                .observacion(seg.getObservacion())
+                .createdAt(seg.getCreatedAt() != null ? seg.getCreatedAt().toString() : null)
+                .build();
     }
 }

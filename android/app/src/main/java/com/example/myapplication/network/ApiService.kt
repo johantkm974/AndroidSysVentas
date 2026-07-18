@@ -126,6 +126,28 @@ interface ApiService {
     @PATCH("ventas/{id}/anular")
     suspend fun cancelSale(@Path("id") id: Long): VentaResponse
     
+    // Envíos
+    @GET("envios")
+    suspend fun listAllEnvios(): List<EnvioResponse>
+
+    @GET("envios/mis-envios")
+    suspend fun myDeliveries(): List<EnvioResponse>
+
+    @GET("envios/{id}")
+    suspend fun getEnvio(@Path("id") id: Long): EnvioResponse
+
+    @GET("envios/pedido/{idPedido}")
+    suspend fun getEnvioByPedido(@Path("idPedido") idPedido: Long): EnvioResponse
+
+    @GET("envios/{id}/tracking")
+    suspend fun getTracking(@Path("id") id: Long): List<SeguimientoResponse>
+
+    @PATCH("envios/{id}/estado")
+    suspend fun updateEnvioStatus(@Path("id") id: Long, @Body req: ActualizarEstadoEnvioRequest): EnvioResponse
+
+    @PATCH("envios/{id}/asignar-repartidor/{idRepartidor}")
+    suspend fun assignRepartidor(@Path("id") id: Long, @Path("idRepartidor") idRepartidor: Long): EnvioResponse
+
     // Dashboard
     @GET("dashboard/resumen")
     suspend fun dashboard(): DashboardResponse

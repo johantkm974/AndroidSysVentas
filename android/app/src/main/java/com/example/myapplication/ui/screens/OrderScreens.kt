@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,9 +25,61 @@ import com.example.myapplication.ui.viewmodel.OrderViewModel
 @Composable
 fun OrderListScreen(viewModel: OrderViewModel, navController: NavController, isAdminOrSeller: Boolean = false) {
     val orders by viewModel.orders.collectAsState()
+    val repartidores by viewModel.repartidores.collectAsState()
+    val assignError by viewModel.assignError.collectAsState()
+    var showRepartidorDialog by remember { mutableStateOf(false) }
+    var selectedPedidoId by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(Unit) {
-        if (isAdminOrSeller) viewModel.loadAllOrders() else viewModel.loadMyOrders()
+        if (isAdminOrSeller) {
+            viewModel.loadAllOrders()
+            viewModel.loadRepartidores()
+        } else {
+            viewModel.loadMyOrders()
+        }
+    }
+
+    if (showRepartidorDialog && selectedPedidoId != 0L) {
+        AlertDialog(
+            onDismissRequest = {
+                showRepartidorDialog = false
+                viewModel.clearAssignError()
+            },
+            title = { Text("Asignar Repartidor") },
+            text = {
+                if (repartidores.isEmpty()) {
+                    Text("No hay repartidores disponibles")
+                } else {
+                    LazyColumn {
+                        items(repartidores) { repartidor ->
+                            TextButton(
+                                onClick = {
+                                    viewModel.assignRepartidor(selectedPedidoId, repartidor.idUsuario)
+                                    showRepartidorDialog = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.Person, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("${repartidor.nombres} ${repartidor.apellidos}")
+                            }
+                        }
+                    }
+                }
+                if (assignError != null) {
+                    Text(assignError!!, color = MaterialTheme.colorScheme.error)
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = {
+                    showRepartidorDialog = false
+                    viewModel.clearAssignError()
+                }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -70,6 +123,10 @@ fun OrderListScreen(viewModel: OrderViewModel, navController: NavController, isA
                         order = order,
                         isAdminOrSeller = isAdminOrSeller,
                         onStatusChange = { newStatus -> viewModel.updateStatus(order.idPedido, newStatus, isAdminOrSeller) },
+                        onAssignRepartidor = {
+                            selectedPedidoId = order.idPedido
+                            showRepartidorDialog = true
+                        },
                         onConfirm = { viewModel.processSaleAndConfirm(order.idPedido) },
                         onCancel = { viewModel.cancelOrder(order.idPedido) }
                     )
@@ -84,12 +141,15 @@ fun OrderListItem(
     order: PedidoResponse,
     isAdminOrSeller: Boolean,
     onStatusChange: (Long) -> Unit,
+    onAssignRepartidor: () -> Unit,
     onConfirm: () -> Unit,
     onCancel: () -> Unit
 ) {
     val statusColor = when (order.estado) {
         "PENDIENTE" -> Color(0xFFFFA000)
         "CONFIRMADO" -> Color(0xFF1976D2)
+        "PREPARANDO" -> Color(0xFF7B1FA2)
+        "ENVIADO" -> Color(0xFFFF6F00)
         "ENTREGADO" -> Color(0xFF388E3C)
         "CANCELADO" -> Color(0xFFD32F2F)
         else -> Color.Gray
@@ -166,17 +226,17 @@ fun OrderListItem(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (order.estado == "CONFIRMADO" || order.estado == "PREPARANDO" || order.estado == "ENVIADO") {
+                    if (order.estado == "CONFIRMADO" || order.estado == "PREPARANDO") {
                         FilledTonalButton(
-                            onClick = { onStatusChange(5) },
+                            onClick = onAssignRepartidor,
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.filledTonalButtonColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer
                             )
                         ) {
-                            Icon(Icons.Default.LocalShipping, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Entregar")
+                            Text("Asignar Repartidor")
                         }
                     }
                 }

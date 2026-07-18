@@ -16,6 +16,7 @@ sealed class Screen(val route: String) {
     object ClientHome : Screen("client_home")
     object SellerHome : Screen("seller_home")
     object StockerHome : Screen("stocker_home")
+    object RepartidorHome : Screen("repartidor_home")
     object AdminHome : Screen("admin_home")
     object ProductList : Screen("product_list")
     object Cart : Screen("cart")
@@ -36,6 +37,11 @@ sealed class Screen(val route: String) {
     object MarcaManagement : Screen("marca_management")
     object ProveedorManagement : Screen("proveedor_management")
     object Register : Screen("register")
+    object DeliveryList : Screen("delivery_list")
+    object DeliveryDetail : Screen("delivery_detail/{id}") {
+        fun createRoute(id: Long) = "delivery_detail/$id"
+    }
+    object AdminEnvios : Screen("admin_envios")
 }
 
 @Composable
@@ -51,6 +57,7 @@ fun NavGraph(
     proveedorViewModel: ProveedorViewModel,
     cartViewModel: CartViewModel,
     ventaViewModel: VentaViewModel,
+    deliveryViewModel: DeliveryViewModel,
     onLogout: () -> Unit
 ) {
     NavHost(
@@ -66,6 +73,7 @@ fun NavGraph(
                         roles.contains("ROLE_ADMIN") -> Screen.AdminHome.route
                         roles.contains("ROLE_VENDEDOR") -> Screen.SellerHome.route
                         roles.contains("ROLE_ALMACENERO") -> Screen.StockerHome.route
+                        roles.contains("ROLE_REPARTIDOR") -> Screen.RepartidorHome.route
                         else -> Screen.ClientHome.route
                     }
                     navController.navigate(destination) {
@@ -78,6 +86,7 @@ fun NavGraph(
         composable(Screen.ClientHome.route) { ClientHomeScreen(navController, onLogout) }
         composable(Screen.SellerHome.route) { SellerHomeScreen(navController, onLogout) }
         composable(Screen.StockerHome.route) { StockerHomeScreen(navController, onLogout) }
+        composable(Screen.RepartidorHome.route) { RepartidorHomeScreen(navController, onLogout) }
         composable(Screen.AdminHome.route) { AdminHomeScreen(navController, onLogout) }
 
         composable(Screen.UserManagement.route) { UserManagementScreen(userViewModel, navController) }
@@ -119,6 +128,19 @@ fun NavGraph(
         composable(Screen.Register.route) { RegisterScreen(loginViewModel, navController) }
         composable(Screen.ProductList.route) { 
             ProductListScreen(productViewModel, cartViewModel, navController, onLogout) 
+        }
+        composable(Screen.DeliveryList.route) {
+            DeliveryListScreen(deliveryViewModel, navController)
+        }
+        composable(
+            route = Screen.DeliveryDetail.route,
+            arguments = listOf(navArgument("id") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getLong("id") ?: 0L
+            DeliveryDetailScreen(id, deliveryViewModel, navController)
+        }
+        composable(Screen.AdminEnvios.route) {
+            AdminEnviosScreen(deliveryViewModel, navController)
         }
     }
 }

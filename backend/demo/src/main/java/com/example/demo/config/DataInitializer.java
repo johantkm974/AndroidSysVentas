@@ -41,6 +41,7 @@ public class DataInitializer implements CommandLineRunner {
         Rol vendedor = rolRepository.save(Rol.builder().nombre("ROLE_VENDEDOR").descripcion("Encargado de registrar ventas y gestionar clientes").build());
         Rol almacenero = rolRepository.save(Rol.builder().nombre("ROLE_ALMACENERO").descripcion("Gestión de inventario y despachos").build());
         Rol cliente = rolRepository.save(Rol.builder().nombre("ROLE_CLIENTE").descripcion("Cliente final que realiza compras web").build());
+        Rol repartidor = rolRepository.save(Rol.builder().nombre("ROLE_REPARTIDOR").descripcion("Encargado de realizar entregas a domicilio").build());
 
         // ===== Métodos de Pago =====
         metodoPagoRepository.save(MetodoPago.builder().nombre("YAPE").descripcion("Pago mediante billetera digital Yape").activo(true).build());
@@ -122,8 +123,19 @@ public class DataInitializer implements CommandLineRunner {
 
         usuarioRolRepository.save(UsuarioRol.builder().usuario(usuarioCliente).rol(cliente).build());
 
+        Usuario usuarioRepartidor = usuarioRepository.save(Usuario.builder()
+                .nombres("Carlos").apellidos("Repartidor").dni("70000003")
+                .telefono("977666555").direccion("Av. Reparto 456").build());
+
+        credencialRepository.save(Credencial.builder()
+                .usuario(usuarioRepartidor).correo("repartidor@sistema.edu.pe")
+                .password(password).build());
+
+        usuarioRolRepository.save(UsuarioRol.builder().usuario(usuarioRepartidor).rol(repartidor).build());
+
         log.info("Datos semilla inicializados correctamente");
         log.info("  Admin: admin@sistema.edu.pe / 123456");
         log.info("  Cliente: johan@cliente.pe / 123456");
+        log.info("  Repartidor: repartidor@sistema.edu.pe / 123456");
     }
 }

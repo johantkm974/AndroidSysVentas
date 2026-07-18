@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface EnvioRepository extends JpaRepository<Envio, Long> {
     Optional<Envio> findByPedidoIdPedido(Long idPedido);
     List<Envio> findByEstadoEnvioIdEstadoEnvio(Long idEstadoEnvio);
+    List<Envio> findByRepartidorIdUsuario(Long idUsuario);
 }

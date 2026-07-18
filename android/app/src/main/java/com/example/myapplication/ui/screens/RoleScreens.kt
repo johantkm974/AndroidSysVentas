@@ -108,6 +108,23 @@ fun StockerHomeScreen(navController: NavController, onLogout: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun RepartidorHomeScreen(navController: NavController, onLogout: () -> Unit) {
+    RoleBaseScreen(
+        title = "Panel de Repartidor",
+        color = Color(0xFFE65100),
+        onLogout = onLogout
+    ) {
+        MenuCard(
+            icon = Icons.Default.LocalShipping,
+            title = "Mis Envíos",
+            subtitle = "Gestiona tus entregas asignadas",
+            onClick = { navController.navigate("delivery_list") }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun AdminHomeScreen(navController: NavController, onLogout: () -> Unit) {
     RoleBaseScreen(
         title = "Panel de Administrador",
@@ -143,6 +160,12 @@ fun AdminHomeScreen(navController: NavController, onLogout: () -> Unit) {
             title = "Gestionar Ventas",
             subtitle = "Historial y anulación de ventas",
             onClick = { navController.navigate(Screen.VentaList.route) }
+        )
+        MenuCard(
+            icon = Icons.Default.LocalShipping,
+            title = "Gestionar Envíos",
+            subtitle = "Administra envíos y seguimiento",
+            onClick = { navController.navigate(Screen.AdminEnvios.route) }
         )
         MenuCard(
             icon = Icons.Default.Category,

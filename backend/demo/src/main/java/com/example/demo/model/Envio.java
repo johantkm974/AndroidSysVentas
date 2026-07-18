@@ -32,6 +32,10 @@ public class Envio {
     @JoinColumn(name = "id_estado_envio", nullable = false)
     private EstadoEnvio estadoEnvio;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_usuario_repartidor")
+    private Usuario repartidor;
+
     @Column(name = "fecha_envio")
     private LocalDateTime fechaEnvio;
 

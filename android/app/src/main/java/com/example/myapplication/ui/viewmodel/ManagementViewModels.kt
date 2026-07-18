@@ -28,7 +28,8 @@ class UserViewModel(private val repository: UserRepository) : ViewModel() {
             RoleResponse(1, "ROLE_ADMIN", "Administrador"),
             RoleResponse(2, "ROLE_VENDEDOR", "Vendedor"),
             RoleResponse(3, "ROLE_ALMACENERO", "Almacenero"),
-            RoleResponse(4, "ROLE_CLIENTE", "Cliente")
+            RoleResponse(4, "ROLE_CLIENTE", "Cliente"),
+            RoleResponse(5, "ROLE_REPARTIDOR", "Repartidor")
         )
         _availableRoles.value = mockRoles
         
@@ -65,10 +66,18 @@ class UserViewModel(private val repository: UserRepository) : ViewModel() {
 // --- Order Management ViewModel ---
 class OrderViewModel(
     private val repository: OrderRepository,
-    private val ventaRepository: VentaRepository
+    private val ventaRepository: VentaRepository,
+    private val deliveryRepository: DeliveryRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
     private val _orders = MutableStateFlow<List<PedidoResponse>>(emptyList())
     val orders: StateFlow<List<PedidoResponse>> = _orders
+
+    private val _repartidores = MutableStateFlow<List<UsuarioResponse>>(emptyList())
+    val repartidores: StateFlow<List<UsuarioResponse>> = _repartidores
+
+    private val _assignError = MutableStateFlow<String?>(null)
+    val assignError: StateFlow<String?> = _assignError
 
     fun loadAllOrders() {
         viewModelScope.launch {
@@ -79,6 +88,14 @@ class OrderViewModel(
     fun loadMyOrders() {
         viewModelScope.launch {
             repository.listMyOrders().onSuccess { _orders.value = it }
+        }
+    }
+
+    fun loadRepartidores() {
+        viewModelScope.launch {
+            userRepository.listUsers().onSuccess { users ->
+                _repartidores.value = users.filter { it.roles.contains("ROLE_REPARTIDOR") }
+            }
         }
     }
 
@@ -111,6 +128,28 @@ class OrderViewModel(
         viewModelScope.launch {
             repository.cancelOrder(id).onSuccess { loadMyOrders() }
         }
+    }
+
+    fun assignRepartidor(pedidoId: Long, repartidorId: Long) {
+        viewModelScope.launch {
+            _assignError.value = null
+            val envioResult = deliveryRepository.getEnvioByPedido(pedidoId)
+            envioResult.onSuccess { envio ->
+                deliveryRepository.assignRepartidor(envio.idEnvio, repartidorId)
+                    .onSuccess {
+                        loadAllOrders()
+                    }
+                    .onFailure { e ->
+                        _assignError.value = e.message ?: "Error al asignar repartidor"
+                    }
+            }.onFailure { e ->
+                _assignError.value = e.message ?: "Error al obtener envío del pedido"
+            }
+        }
+    }
+
+    fun clearAssignError() {
+        _assignError.value = null
     }
 }
 

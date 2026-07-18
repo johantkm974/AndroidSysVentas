@@ -11,6 +11,8 @@ public class PedidoRequest {
     @NotEmpty
     private List<ItemPedido> items;
     private String observacion;
+    private String direccion;
+    private String distrito;
 
     @Data
     public static class ItemPedido {

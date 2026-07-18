@@ -5,7 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -154,9 +156,44 @@ fun CartScreen(viewModel: CartViewModel, navController: NavController) {
 
                 Surface(
                     shadowElevation = 8.dp,
-                    tonalElevation = 2.dp
+                    tonalElevation = 2.dp,
+                    modifier = Modifier.heightIn(max = 400.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        val direccion by viewModel.direccion.collectAsState()
+                        val distrito by viewModel.distrito.collectAsState()
+
+                        Text(
+                            "Dirección de Envío",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = direccion,
+                            onValueChange = { viewModel.updateDireccion(it) },
+                            label = { Text("Dirección *") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = distrito,
+                            onValueChange = { viewModel.updateDistrito(it) },
+                            label = { Text("Distrito *") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
                         OutlinedTextField(
                             value = observacion,
                             onValueChange = { observacion = it },

@@ -173,11 +173,12 @@ public class PedidoServiceImpl implements PedidoService {
         EstadoEnvio estadoPendiente = estadoEnvioRepository.findByNombre("PENDIENTE")
                 .orElseThrow(() -> new RuntimeException("Estado PENDIENTE de envío no configurado"));
 
-        String direccionEnvio = cliente.getDireccion() != null ? cliente.getDireccion() : "Por asignar";
+        String direccionEnvio = request.getDireccion() != null ? request.getDireccion() : (cliente.getDireccion() != null ? cliente.getDireccion() : "Por asignar");
+        String distritoEnvio = request.getDistrito() != null ? request.getDistrito() : "Por asignar";
         Envio envio = Envio.builder()
                 .pedido(pedido)
                 .direccion(direccionEnvio)
-                .distrito("Por asignar")
+                .distrito(distritoEnvio)
                 .estadoEnvio(estadoPendiente)
                 .build();
 
