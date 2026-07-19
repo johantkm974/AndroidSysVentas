@@ -134,7 +134,9 @@ data class PedidoResponse(
     val total: Double,
     val observacion: String?,
     val createdAt: String?,
-    val detalles: List<DetallePedidoResponse>?
+    val detalles: List<DetallePedidoResponse>?,
+    val idEnvio: Long? = null,
+    val estadoEnvio: String? = null
 )
 
 data class DetallePedidoResponse(

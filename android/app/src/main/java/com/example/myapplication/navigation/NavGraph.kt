@@ -42,6 +42,9 @@ sealed class Screen(val route: String) {
         fun createRoute(id: Long) = "delivery_detail/$id"
     }
     object AdminEnvios : Screen("admin_envios")
+    object OrderDetail : Screen("order_detail/{pedidoId}") {
+        fun createRoute(pedidoId: Long) = "order_detail/$pedidoId"
+    }
 }
 
 @Composable
@@ -141,6 +144,13 @@ fun NavGraph(
         }
         composable(Screen.AdminEnvios.route) {
             AdminEnviosScreen(deliveryViewModel, navController)
+        }
+        composable(
+            route = Screen.OrderDetail.route,
+            arguments = listOf(navArgument("pedidoId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val pedidoId = backStackEntry.arguments?.getLong("pedidoId") ?: 0L
+            OrderDetailScreen(pedidoId, orderViewModel, navController)
         }
     }
 }

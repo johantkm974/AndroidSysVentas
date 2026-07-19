@@ -325,6 +325,8 @@ public class PedidoServiceImpl implements PedidoService {
                         .build())
                 .collect(Collectors.toList());
 
+        Envio envio = envioRepository.findByPedidoIdPedido(pedido.getIdPedido()).orElse(null);
+
         return PedidoResponse.builder()
                 .idPedido(pedido.getIdPedido())
                 .numeroPedido(pedido.getNumeroPedido())
@@ -334,6 +336,8 @@ public class PedidoServiceImpl implements PedidoService {
                 .observacion(pedido.getObservacion())
                 .createdAt(pedido.getCreatedAt())
                 .detalles(detalles)
+                .idEnvio(envio != null ? envio.getIdEnvio() : null)
+                .estadoEnvio(envio != null ? envio.getEstadoEnvio().getNombre() : null)
                 .build();
     }
 }

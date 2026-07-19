@@ -18,6 +18,8 @@ public class PedidoResponse {
     private String observacion;
     private LocalDateTime createdAt;
     private List<DetallePedidoResponse> detalles;
+    private Long idEnvio;
+    private String estadoEnvio;
 
     @Data @AllArgsConstructor @Builder
     public static class DetallePedidoResponse {

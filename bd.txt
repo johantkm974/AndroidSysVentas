@@ -188,12 +188,14 @@ CREATE TABLE envios (
     distrito VARCHAR(100) NOT NULL,
     referencia VARCHAR(255),
     id_estado_envio BIGINT NOT NULL,
+    id_usuario_repartidor BIGINT,
     fecha_envio TIMESTAMP NULL,
     fecha_entrega TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_envio_pedido FOREIGN KEY (id_pedido) REFERENCES pedidos(id_pedido),
-    CONSTRAINT fk_envio_estado FOREIGN KEY (id_estado_envio) REFERENCES estados_envio(id_estado_envio)
+    CONSTRAINT fk_envio_estado FOREIGN KEY (id_estado_envio) REFERENCES estados_envio(id_estado_envio),
+    CONSTRAINT fk_envio_repartidor FOREIGN KEY (id_usuario_repartidor) REFERENCES usuarios(id_usuario)
 );
 
 CREATE TABLE seguimiento_envio (
@@ -257,11 +259,13 @@ CREATE TABLE detalle_venta (
     CONSTRAINT fk_det_venta FOREIGN KEY (id_venta) REFERENCES ventas(id_venta) ON DELETE CASCADE,
     CONSTRAINT fk_det_venta_prod FOREIGN KEY (id_producto) REFERENCES productos(id_producto)
 );
-
 SET FOREIGN_KEY_CHECKS = 1;
 
+
 -- ==============================================================================
--- 🚀 INSERCIÓN DE DATOS SEMILLA (SEED DATA)
+-- SISTEMA electronicos - SCRIPT DE DATOS SEMILLA (SOLO INSERT)
+-- USAR SOLO SI NO USAS DataInitializer.java
+-- Hash BCrypt válido para password "123456"
 -- ==============================================================================
 
 USE sistema_electronicos;
@@ -271,7 +275,8 @@ INSERT IGNORE INTO roles (nombre, descripcion) VALUES
 ('ROLE_ADMIN', 'Administrador total del sistema'),
 ('ROLE_VENDEDOR', 'Encargado de registrar ventas y gestionar clientes'),
 ('ROLE_ALMACENERO', 'Gestión de inventario y despachos'),
-('ROLE_CLIENTE', 'Cliente final que realiza compras web');
+('ROLE_CLIENTE', 'Cliente final que realiza compras web'),
+('ROLE_REPARTIDOR', 'Encargado de realizar entregas a domicilio');
 
 -- Métodos de Pago
 INSERT IGNORE INTO metodos_pago (nombre, descripcion) VALUES
@@ -325,12 +330,15 @@ INSERT IGNORE INTO productos (codigo, nombre, descripcion, precio_compra, precio
 -- Usuarios (BCrypt hash válido de "123456")
 INSERT IGNORE INTO usuarios (id_usuario, nombres, apellidos, dni, telefono, direccion) VALUES
 (1, 'Johan', 'Admin', '70000001', '999888777', 'Av. Desarrollo 123'),
-(2, 'johan', 'joseph', '70000002', '988777666', 'Calle Las Pruebas 404');
+(2, 'johan', 'joseph', '70000002', '988777666', 'Calle Las Pruebas 404'),
+(3, 'Carlos', 'Repartidor', '70000003', '977666555', 'Av. Reparto 456');
 
 INSERT IGNORE INTO credenciales (id_usuario, correo, password) VALUES
 (1, 'admin@sistema.edu.pe', '$2a$10$ApfrUWJlHwi8IT5BJJZzI.eHf29b9bokRScwNnlusR0N2cwpUkZyK'),
-(2, 'johan@cliente.pe', '$2a$10$ApfrUWJlHwi8IT5BJJZzI.eHf29b9bokRScwNnlusR0N2cwpUkZyK');
+(2, 'johan@cliente.pe', '$2a$10$ApfrUWJlHwi8IT5BJJZzI.eHf29b9bokRScwNnlusR0N2cwpUkZyK'),
+(3, 'repartidor@sistema.edu.pe', '$2a$10$ApfrUWJlHwi8IT5BJJZzI.eHf29b9bokRScwNnlusR0N2cwpUkZyK');
 
 INSERT IGNORE INTO usuarios_roles (id_usuario, id_rol) VALUES
 (1, 1),
-(2, 4);
+(2, 4),
+(3, 5);

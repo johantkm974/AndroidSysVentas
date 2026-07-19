@@ -79,6 +79,12 @@ class OrderViewModel(
     private val _assignError = MutableStateFlow<String?>(null)
     val assignError: StateFlow<String?> = _assignError
 
+    private val _selectedEnvio = MutableStateFlow<EnvioResponse?>(null)
+    val selectedEnvio: StateFlow<EnvioResponse?> = _selectedEnvio
+
+    private val _tracking = MutableStateFlow<List<SeguimientoResponse>>(emptyList())
+    val tracking: StateFlow<List<SeguimientoResponse>> = _tracking
+
     fun loadAllOrders() {
         viewModelScope.launch {
             repository.listAllOrders().onSuccess { _orders.value = it }
@@ -150,6 +156,25 @@ class OrderViewModel(
 
     fun clearAssignError() {
         _assignError.value = null
+    }
+
+    fun loadEnvioByPedido(pedidoId: Long) {
+        viewModelScope.launch {
+            deliveryRepository.getEnvioByPedido(pedidoId)
+                .onSuccess { _selectedEnvio.value = it }
+        }
+    }
+
+    fun loadTracking(envioId: Long) {
+        viewModelScope.launch {
+            deliveryRepository.getTracking(envioId)
+                .onSuccess { _tracking.value = it }
+        }
+    }
+
+    fun clearEnvioAndTracking() {
+        _selectedEnvio.value = null
+        _tracking.value = emptyList()
     }
 }
 

@@ -7,7 +7,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
@@ -122,13 +121,14 @@ fun OrderListScreen(viewModel: OrderViewModel, navController: NavController, isA
                     OrderListItem(
                         order = order,
                         isAdminOrSeller = isAdminOrSeller,
-                        onStatusChange = { newStatus -> viewModel.updateStatus(order.idPedido, newStatus, isAdminOrSeller) },
                         onAssignRepartidor = {
                             selectedPedidoId = order.idPedido
                             showRepartidorDialog = true
                         },
-                        onConfirm = { viewModel.processSaleAndConfirm(order.idPedido) },
-                        onCancel = { viewModel.cancelOrder(order.idPedido) }
+                        onCancel = { viewModel.cancelOrder(order.idPedido) },
+                        onClickDetail = {
+                            navController.navigate("order_detail/${order.idPedido}")
+                        }
                     )
                 }
             }
@@ -140,10 +140,9 @@ fun OrderListScreen(viewModel: OrderViewModel, navController: NavController, isA
 fun OrderListItem(
     order: PedidoResponse,
     isAdminOrSeller: Boolean,
-    onStatusChange: (Long) -> Unit,
     onAssignRepartidor: () -> Unit,
-    onConfirm: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onClickDetail: () -> Unit = {}
 ) {
     val statusColor = when (order.estado) {
         "PENDIENTE" -> Color(0xFFFFA000)
@@ -155,7 +154,19 @@ fun OrderListItem(
         else -> Color.Gray
     }
 
+    val envioStatusColor = when (order.estadoEnvio) {
+        "PENDIENTE" -> Color(0xFFFFA000)
+        "EN_RUTA" -> Color(0xFF1976D2)
+        "ENTREGADO" -> Color(0xFF388E3C)
+        "CANCELADO" -> Color(0xFFD32F2F)
+        else -> null
+    }
+
+    val hasEnvio = order.idEnvio != null
+    val isClickable = !isAdminOrSeller && hasEnvio
+
     Card(
+        onClick = { if (isClickable) onClickDetail() },
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -184,6 +195,24 @@ fun OrderListItem(
                     )
                 }
             }
+            if (order.estadoEnvio != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.LocalShipping,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = envioStatusColor ?: Color.Gray
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "Envío: ${formatearEstadoEnvio(order.estadoEnvio)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = envioStatusColor ?: Color.Gray,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider()
             Spacer(modifier = Modifier.height(8.dp))
@@ -200,7 +229,7 @@ fun OrderListItem(
                 fontWeight = FontWeight.Bold
             )
 
-            if (order.detalles != null && order.detalles.isNotEmpty()) {
+            if (!order.detalles.isNullOrEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "Detalles:",
@@ -251,6 +280,210 @@ fun OrderListItem(
                     Icon(Icons.Default.Cancel, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Cancelar Pedido")
+                }
+            }
+        }
+    }
+}
+
+fun formatearEstadoEnvio(estado: String): String {
+    return when (estado) {
+        "PENDIENTE" -> "Pendiente"
+        "EN_RUTA" -> "En camino"
+        "ENTREGADO" -> "Entregado"
+        "CANCELADO" -> "Cancelado"
+        else -> estado
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OrderDetailScreen(
+    pedidoId: Long,
+    viewModel: OrderViewModel,
+    navController: NavController
+) {
+    val orders by viewModel.orders.collectAsState()
+    val envio by viewModel.selectedEnvio.collectAsState()
+    val tracking by viewModel.tracking.collectAsState()
+
+    val order = orders.find { it.idPedido == pedidoId }
+
+    LaunchedEffect(pedidoId) {
+        viewModel.clearEnvioAndTracking()
+        viewModel.loadEnvioByPedido(pedidoId)
+    }
+
+    LaunchedEffect(envio) {
+        envio?.let { viewModel.loadTracking(it.idEnvio) }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Seguimiento de Pedido") },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        viewModel.clearEnvioAndTracking()
+                        navController.popBackStack()
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            order?.let { o ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "Pedido: ${o.numeroPedido}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        val statusColor = when (o.estado) {
+                            "PENDIENTE" -> Color(0xFFFFA000)
+                            "CONFIRMADO" -> Color(0xFF1976D2)
+                            "PREPARANDO" -> Color(0xFF7B1FA2)
+                            "ENVIADO" -> Color(0xFFFF6F00)
+                            "ENTREGADO" -> Color(0xFF388E3C)
+                            "CANCELADO" -> Color(0xFFD32F2F)
+                            else -> Color.Gray
+                        }
+                        Text(
+                            "Estado: ${o.estado}",
+                            color = statusColor,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            "Total: S/ ${o.total}",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                if (!o.detalles.isNullOrEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "Detalles del Pedido",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            o.detalles.forEach { d ->
+                                Text(
+                                    "• ${d.producto} x${d.cantidad} - S/ ${d.subtotal}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            envio?.let { e ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "Información del Envío",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Dirección: ${e.direccion}")
+                        Text("Distrito: ${e.distrito}")
+                        if (e.referencia != null) Text("Referencia: ${e.referencia}")
+                        if (e.repartidor != null) Text("Repartidor: ${e.repartidor}")
+                        val envioStatusColor = when (e.estadoEnvio?.nombre) {
+                            "PENDIENTE" -> Color(0xFFFFA000)
+                            "EN_RUTA" -> Color(0xFF1976D2)
+                            "ENTREGADO" -> Color(0xFF388E3C)
+                            "CANCELADO" -> Color(0xFFD32F2F)
+                            else -> Color.Gray
+                        }
+                        Text(
+                            "Estado: ${formatearEstadoEnvio(e.estadoEnvio?.nombre ?: "")}",
+                            color = envioStatusColor,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                Text(
+                    "Historial de Seguimiento",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                if (tracking.isEmpty()) {
+                    Text(
+                        "Sin seguimiento disponible",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    tracking.forEach { seg ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    seg.estadoEnvio?.nombre?.let { formatearEstadoEnvio(it) } ?: "",
+                                    fontWeight = FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                                if (seg.observacion != null) {
+                                    Text(
+                                        seg.observacion,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                                if (seg.createdAt != null) {
+                                    Text(
+                                        seg.createdAt,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (order == null && envio == null) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
             }
         }
