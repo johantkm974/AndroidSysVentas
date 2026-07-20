@@ -8,6 +8,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.util.Optional;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -29,113 +32,241 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (rolRepository.count() > 0) {
-            log.info("Base de datos ya inicializada");
-            return;
-        }
-
-        log.info("Inicializando datos semilla...");
+        log.info("=== Inicializando datos semilla ===");
 
         // ===== Roles =====
-        Rol admin = rolRepository.save(Rol.builder().nombre("ROLE_ADMIN").descripcion("Administrador total del sistema").build());
-        Rol vendedor = rolRepository.save(Rol.builder().nombre("ROLE_VENDEDOR").descripcion("Encargado de registrar ventas y gestionar clientes").build());
-        Rol almacenero = rolRepository.save(Rol.builder().nombre("ROLE_ALMACENERO").descripcion("Gestión de inventario y despachos").build());
-        Rol cliente = rolRepository.save(Rol.builder().nombre("ROLE_CLIENTE").descripcion("Cliente final que realiza compras web").build());
-        Rol repartidor = rolRepository.save(Rol.builder().nombre("ROLE_REPARTIDOR").descripcion("Encargado de realizar entregas a domicilio").build());
+        Rol admin = findOrCreateRol("ROLE_ADMIN", "Administrador total del sistema");
+        Rol vendedor = findOrCreateRol("ROLE_VENDEDOR", "Encargado de registrar ventas y gestionar clientes");
+        Rol almacenero = findOrCreateRol("ROLE_ALMACENERO", "Gestión de inventario y despachos");
+        Rol cliente = findOrCreateRol("ROLE_CLIENTE", "Cliente final que realiza compras web");
+        Rol repartidor = findOrCreateRol("ROLE_REPARTIDOR", "Encargado de realizar entregas a domicilio");
 
         // ===== Métodos de Pago =====
-        metodoPagoRepository.save(MetodoPago.builder().nombre("YAPE").descripcion("Pago mediante billetera digital Yape").activo(true).build());
-        metodoPagoRepository.save(MetodoPago.builder().nombre("PLIN").descripcion("Pago mediante billetera digital Plin").activo(true).build());
-        metodoPagoRepository.save(MetodoPago.builder().nombre("TARJETA").descripcion("Pago con tarjeta de crédito/débito").activo(true).build());
-        metodoPagoRepository.save(MetodoPago.builder().nombre("EFECTIVO").descripcion("Pago en efectivo en tienda").activo(true).build());
-        metodoPagoRepository.save(MetodoPago.builder().nombre("SIMULADO").descripcion("Pago de prueba para entorno de desarrollo").activo(true).build());
+        findOrCreateMetodoPago("YAPE", "Pago mediante billetera digital Yape");
+        findOrCreateMetodoPago("PLIN", "Pago mediante billetera digital Plin");
+        findOrCreateMetodoPago("TARJETA", "Pago con tarjeta de crédito/débito");
+        findOrCreateMetodoPago("EFECTIVO", "Pago en efectivo en tienda");
+        findOrCreateMetodoPago("SIMULADO", "Pago de prueba para entorno de desarrollo");
 
         // ===== Estados de Venta =====
-        estadoVentaRepository.save(EstadoVenta.builder().nombre("PENDIENTE").descripcion("Venta registrada pero el pago aún no se confirma").build());
-        estadoVentaRepository.save(EstadoVenta.builder().nombre("PAGADA").descripcion("El pago ha sido procesado exitosamente").build());
-        estadoVentaRepository.save(EstadoVenta.builder().nombre("ANULADA").descripcion("La venta fue cancelada o el pago rechazado").build());
+        findOrCreateEstadoVenta("PENDIENTE", "Venta registrada pero el pago aún no se confirma");
+        findOrCreateEstadoVenta("PAGADA", "El pago ha sido procesado exitosamente");
+        findOrCreateEstadoVenta("ANULADA", "La venta fue cancelada o el pago rechazado");
 
         // ===== Estados de Pedido =====
-        estadoPedidoRepository.save(EstadoPedido.builder().nombre("PENDIENTE").descripcion("Pedido recién creado por el cliente").build());
-        estadoPedidoRepository.save(EstadoPedido.builder().nombre("CONFIRMADO").descripcion("Stock separado y validado").build());
-        estadoPedidoRepository.save(EstadoPedido.builder().nombre("PREPARANDO").descripcion("El pedido se está empaquetando en almacén").build());
-        estadoPedidoRepository.save(EstadoPedido.builder().nombre("ENVIADO").descripcion("El pedido ya salió a ruta de entrega").build());
-        estadoPedidoRepository.save(EstadoPedido.builder().nombre("ENTREGADO").descripcion("El cliente recibió su pedido").build());
-        estadoPedidoRepository.save(EstadoPedido.builder().nombre("CANCELADO").descripcion("El pedido fue cancelado por falta de stock o solicitud").build());
+        findOrCreateEstadoPedido("PENDIENTE", "Pedido recién creado por el cliente");
+        findOrCreateEstadoPedido("CONFIRMADO", "Stock separado y validado");
+        findOrCreateEstadoPedido("PREPARANDO", "El pedido se está empaquetando en almacén");
+        findOrCreateEstadoPedido("ENVIADO", "El pedido ya salió a ruta de entrega");
+        findOrCreateEstadoPedido("ENTREGADO", "El cliente recibió su pedido");
+        findOrCreateEstadoPedido("CANCELADO", "El pedido fue cancelado por falta de stock o solicitud");
 
         // ===== Estados de Envío =====
-        estadoEnvioRepository.save(EstadoEnvio.builder().nombre("PENDIENTE").descripcion("Aún no se ha asignado a ruta").build());
-        estadoEnvioRepository.save(EstadoEnvio.builder().nombre("EN_RUTA").descripcion("El repartidor está en camino").build());
-        estadoEnvioRepository.save(EstadoEnvio.builder().nombre("ENTREGADO").descripcion("Paquete entregado con éxito").build());
-        estadoEnvioRepository.save(EstadoEnvio.builder().nombre("CANCELADO").descripcion("Envío fallido o cancelado").build());
+        findOrCreateEstadoEnvio("PENDIENTE", "Aún no se ha asignado a ruta");
+        findOrCreateEstadoEnvio("EN_RUTA", "El repartidor está en camino");
+        findOrCreateEstadoEnvio("ENTREGADO", "Paquete entregado con éxito");
+        findOrCreateEstadoEnvio("CANCELADO", "Envío fallido o cancelado");
 
         // ===== Categorías =====
-        Categoria catComponentes = categoriaRepository.save(Categoria.builder().nombre("Componentes de PC").descripcion("Hardware general para armado de equipos").build());
-        Categoria catPerifericos = categoriaRepository.save(Categoria.builder().nombre("Periféricos").descripcion("Teclados, ratones, audífonos").build());
+        Categoria catComponentes = findOrCreateCategoria("Componentes de PC", "Hardware general para armado de equipos");
+        Categoria catPerifericos = findOrCreateCategoria("Periféricos", "Teclados, ratones, audífonos");
+        Categoria catMonitores = findOrCreateCategoria("Monitores", "Pantallas para gaming, diseño y oficina");
+        Categoria catLaptops = findOrCreateCategoria("Laptops", "Computadoras portátiles");
+        Categoria catRedes = findOrCreateCategoria("Redes", "Routers, switches, cables de red");
+        Categoria catAlmacenamiento = findOrCreateCategoria("Almacenamiento", "SSD, HDD, pendrives, tarjetas SD");
+        Categoria catAudio = findOrCreateCategoria("Audio y Video", "Parlantes, micrófonos, cámaras");
+        Categoria catAccesorios = findOrCreateCategoria("Accesorios", "Fuentes de poder, gabinetes, enfriamiento");
 
         // ===== Marcas =====
-        Marca marcaNvidia = marcaRepository.save(Marca.builder().nombre("NVIDIA").descripcion("Tarjetas gráficas de alto rendimiento").build());
-        Marca marcaLogitech = marcaRepository.save(Marca.builder().nombre("Logitech").descripcion("Periféricos y accesorios").build());
+        Marca marcaNvidia = findOrCreateMarca("NVIDIA", "Tarjetas gráficas de alto rendimiento");
+        Marca marcaLogitech = findOrCreateMarca("Logitech", "Periféricos y accesorios");
+        Marca marcaSamsung = findOrCreateMarca("Samsung", "Monitores, SSD y almacenamiento");
+        Marca marcaCorsair = findOrCreateMarca("Corsair", "Memorias RAM, fuentes de poder, periféricos");
+        Marca marcaAsus = findOrCreateMarca("ASUS", "Placas base, laptops, monitores ROG");
+        Marca marcaHyperX = findOrCreateMarca("HyperX", "Audífonos, teclados gamer");
+        Marca marcaKingston = findOrCreateMarca("Kingston", "Memorias RAM, SSD, almacenamiento");
+        Marca marcaTP = findOrCreateMarca("TP-Link", "Routers, switches, adaptadores de red");
+        Marca marcaIntel = findOrCreateMarca("Intel", "Procesadores Core i3, i5, i7, i9");
+        Marca marcaAMD = findOrCreateMarca("AMD", "Procesadores Ryzen, tarjetas gráficas Radeon");
 
         // ===== Proveedores =====
-        Proveedor proveedor = proveedorRepository.save(Proveedor.builder()
-                .razonSocial("Tech Distribuciones S.A.C.").ruc("20123456789")
-                .telefono("01-555-1234").correo("ventas@techdist.pe")
-                .direccion("Av. Garcilaso de la Vega 1234, Lima").build());
+        Proveedor provTechDist = findOrCreateProveedor("Tech Distribuciones S.A.C.", "20123456789",
+                "01-555-1234", "ventas@techdist.pe", "Av. Garcilaso de la Vega 1234, Lima");
+        Proveedor provCompuPeru = findOrCreateProveedor("CompuPeru Import S.A.C.", "20987654321",
+                "01-555-5678", "ventas@compupeu.pe", "Av. Argentina 2500, Callao");
+        Proveedor provRedesTotal = findOrCreateProveedor("RedesTotal S.A.C.", "20456789012",
+                "01-555-9012", "ventas@redestotal.pe", "Jr. de la Unión 500, Cercado de Lima");
+        Proveedor provGamerStore = findOrCreateProveedor("GamerStore Perú S.A.C.", "20321098765",
+                "01-555-3456", "ventas@gamerstore.pe", "Av. Aviación 1200, San Isidro");
 
-        // ===== Productos =====
-        productoRepository.save(Producto.builder()
-                .codigo("GPU-NV-4060").nombre("NVIDIA GeForce RTX 4060")
-                .descripcion("Tarjeta gráfica para gaming y desarrollo")
-                .precioCompra(new java.math.BigDecimal("1200.00"))
-                .precioVenta(new java.math.BigDecimal("1500.00"))
-                .stock(15).stockMinimo(3)
-                .categoria(catComponentes).marca(marcaNvidia).proveedor(proveedor).build());
+        // ===== Productos (30) =====
+        // Componentes de PC
+        findOrCreateProducto("GPU-NV-4060", "NVIDIA GeForce RTX 4060", "Tarjeta gráfica 8GB GDDR6 para gaming 1440p",
+                "1200.00", "1500.00", 15, 3, catComponentes, marcaNvidia, provGamerStore);
+        findOrCreateProducto("GPU-NV-4070", "NVIDIA GeForce RTX 4070", "Tarjeta gráfica 12GB GDDR6X para gaming 4K",
+                "2200.00", "2700.00", 8, 2, catComponentes, marcaNvidia, provGamerStore);
+        findOrCreateProducto("CPU-IN-13600K", "Intel Core i5-13600K", "Procesador 14 núcleos / 20 hilos, hasta 5.1 GHz",
+                "1100.00", "1350.00", 12, 3, catComponentes, marcaIntel, provTechDist);
+        findOrCreateProducto("CPU-IN-14700K", "Intel Core i7-14700K", "Procesador 20 núcleos / 28 hilos, hasta 5.6 GHz",
+                "1800.00", "2200.00", 6, 2, catComponentes, marcaIntel, provTechDist);
+        findOrCreateProducto("CPU-AM-7800X3D", "AMD Ryzen 7 7800X3D", "Procesador 8 núcleos con 3D V-Cache para gaming",
+                "1500.00", "1850.00", 10, 2, catComponentes, marcaAMD, provTechDist);
+        findOrCreateProducto("RAM-COR-32GB", "Corsair Vengeance 32GB DDR5 5600MHz", "Kit 2x16GB DDR5 para gaming y productividad",
+                "350.00", "450.00", 25, 5, catComponentes, marcaCorsair, provCompuPeru);
+        findOrCreateProducto("RAM-KIN-16GB", "Kingston FURY Beast 16GB DDR4 3200MHz", "Módulo 16GB DDR4 para upgrades de PC",
+                "120.00", "170.00", 40, 10, catComponentes, marcaKingston, provCompuPeru);
+        findOrCreateProducto("MB-AS-ROG", "ASUS ROG Strix Z790-E Gaming WiFi", "Placa base ATX, LGA 1700, DDR5, WiFi 6E",
+                "1400.00", "1750.00", 5, 2, catComponentes, marcaAsus, provGamerStore);
 
-        productoRepository.save(Producto.builder()
-                .codigo("PER-LOG-G502").nombre("Mouse Logitech G502 Hero")
-                .descripcion("Mouse gamer con sensor Hero 25K")
-                .precioCompra(new java.math.BigDecimal("150.00"))
-                .precioVenta(new java.math.BigDecimal("220.00"))
-                .stock(30).stockMinimo(5)
-                .categoria(catPerifericos).marca(marcaLogitech).proveedor(proveedor).build());
+        // Periféricos
+        findOrCreateProducto("PER-LOG-G502", "Mouse Logitech G502 Hero", "Mouse gamer con sensor Hero 25K, 25600 DPI",
+                "150.00", "220.00", 30, 5, catPerifericos, marcaLogitech, provTechDist);
+        findOrCreateProducto("PER-LOG-K520", "Teclado Logitech K520 Inalámbrico", "Teclado inalámbrico multimedia para oficina",
+                "80.00", "120.00", 35, 8, catPerifericos, marcaLogitech, provTechDist);
+        findOrCreateProducto("PER-HX-Cloud", "HyperX Cloud II 7.1", "Audífonos gamer con sonido envolvente 7.1, micrófono desmontable",
+                "200.00", "290.00", 18, 4, catPerifericos, marcaHyperX, provGamerStore);
+        findOrCreateProducto("PER-COR-K100", "Corsair K100 RGB", "Teclado mecánico gaming con switches OPX, RGB",
+                "350.00", "480.00", 10, 2, catPerifericos, marcaCorsair, provGamerStore);
+        findOrCreateProducto("PER-LOG-PRO", "Logitech MX Master 3S", "Mouse inalámbrico productividad, MagSpeed, USB-C",
+                "280.00", "380.00", 14, 3, catPerifericos, marcaLogitech, provTechDist);
+
+        // Monitores
+        findOrCreateProducto("MON-SAM-27", "Samsung Odyssey G5 27\" 165Hz", "Monitor gaming 27\" QHD 165Hz, 1ms, curvo 1000R",
+                "850.00", "1050.00", 12, 3, catMonitores, marcaSamsung, provCompuPeru);
+        findOrCreateProducto("MON-AS-27", "ASUS ROG Swift PG279QM 27\"", "Monitor gaming 27\" QHD 240Hz, IPS, G-Sync",
+                "2200.00", "2700.00", 4, 1, catMonitores, marcaAsus, provGamerStore);
+        findOrCreateProducto("MON-SAM-32", "Samsung ViewFinity S8 32\" 4K", "Monitor 32\" 4K UHD, USB-C, 99% sRGB para diseño",
+                "1500.00", "1850.00", 7, 2, catMonitores, marcaSamsung, provCompuPeru);
+        findOrCreateProducto("MON-LG-24", "LG 24MP400 24\" FHD", "Monitor 24\" Full HD, IPS, 75Hz, FreeSync",
+                "450.00", "580.00", 20, 5, catMonitores, marcaSamsung, provCompuPeru);
+
+        // Laptops
+        findOrCreateProducto("LAP-AS-TUF", "ASUS TUF Gaming A15 FA507NV", "Laptop 15.6\" FHD 144Hz, Ryzen 7 7735HS, RTX 4060, 16GB, 512GB SSD",
+                "3800.00", "4500.00", 6, 2, catLaptops, marcaAsus, provGamerStore);
+        findOrCreateProducto("LAP-AS-VIVO", "ASUS VivoBook 15 X1504ZA", "Laptop 15.6\" FHD, Core i5-1235U, 8GB, 512GB SSD",
+                "1600.00", "1950.00", 10, 3, catLaptops, marcaAsus, provTechDist);
+        findOrCreateProducto("LAP-HP-15", "HP Laptop 15-fd0000la", "Laptop 15.6\" FHD, Core i5-1335U, 8GB, 256GB SSD",
+                "1400.00", "1700.00", 8, 2, catLaptops, marcaIntel, provCompuPeru);
+
+        // Redes
+        findOrCreateProducto("RED-TP-AX", "TP-Link Archer AX55", "Router WiFi 6 dual band, 2402 Mbps, Gigabit",
+                "180.00", "260.00", 22, 5, catRedes, marcaTP, provRedesTotal);
+        findOrCreateProducto("RED-TP-SW", "TP-Link TL-SG105 Switch 5 Puertos", "Switch Gigabit 5 puertos, plug & play",
+                "50.00", "80.00", 40, 10, catRedes, marcaTP, provRedesTotal);
+        findOrCreateProducto("RED-TP-USB", "TP-Link Archer T3U Plus Adaptador WiFi USB", "Adaptador WiFi USB AC1300, doble banda, antena externa",
+                "60.00", "95.00", 30, 8, catRedes, marcaTP, provRedesTotal);
+
+        // Almacenamiento
+        findOrCreateProducto("SSD-SAM-1TB", "Samsung 870 EVO 1TB SATA", "SSD SATA 2.5\", 560/530 MB/s, V-NAND",
+                "280.00", "370.00", 20, 5, catAlmacenamiento, marcaSamsung, provCompuPeru);
+        findOrCreateProducto("SSD-KIN-500GB", "Kingston NV2 500GB NVMe", "SSD NVMe PCIe Gen4, 3500/2100 MB/s",
+                "120.00", "175.00", 35, 8, catAlmacenamiento, marcaKingston, provCompuPeru);
+        findOrCreateProducto("HDD-WD-2TB", "WD Blue 2TB 3.5\"", "Disco duro interno 2TB, 7200 RPM, SATA III",
+                "160.00", "220.00", 15, 4, catAlmacenamiento, marcaKingston, provTechDist);
+
+        // Audio y Video
+        findOrCreateProducto("AUD-HX-Alpha", "HyperX Alpha Wireless", "Audífonos gamer inalámbricos, 300h batería, DTS",
+                "380.00", "500.00", 10, 2, catAudio, marcaHyperX, provGamerStore);
+        findOrCreateProducto("SPK-LOG-Z506", "Logitech Z506 5.1 Surround", "Sistema de parlantes 5.1, 75W RMS, graves potentes",
+                "200.00", "290.00", 12, 3, catAudio, marcaLogitech, provTechDist);
+
+        // Accesorios
+        findOrCreateProducto("ACC-COR-CX750", "Corsair CX750M 80+ Bronze", "Fuente de poder 750W modular, certificación 80+ Bronze",
+                "250.00", "340.00", 18, 4, catAccesorios, marcaCorsair, provCompuPeru);
+        findOrCreateProducto("ACC-COR-4000D", "Corsair 4000D Airflow", "Gabinete ATX medio torre, excelente flujo de aire, templado lateral",
+                "280.00", "370.00", 14, 3, catAccesorios, marcaCorsair, provCompuPeru);
 
         // ===== Usuarios =====
         String password = passwordEncoder.encode("123456");
 
-        Usuario usuarioAdmin = usuarioRepository.save(Usuario.builder()
-                .nombres("Johan").apellidos("Admin").dni("70000001")
-                .telefono("999888777").direccion("Av. Desarrollo 123").build());
+        Usuario usuarioAdmin = usuarioRepository.findByDni("70000001").orElseGet(() ->
+                usuarioRepository.save(Usuario.builder()
+                        .nombres("Johan").apellidos("Admin").dni("70000001")
+                        .telefono("999888777").direccion("Av. Desarrollo 123").activo(true).build()));
+        if (credencialRepository.findByCorreo("admin@sistema.edu.pe").isEmpty()) {
+            credencialRepository.save(Credencial.builder()
+                    .usuario(usuarioAdmin).correo("admin@sistema.edu.pe").password(password).activo(true).build());
+            usuarioRolRepository.save(UsuarioRol.builder().usuario(usuarioAdmin).rol(admin).build());
+        }
 
-        credencialRepository.save(Credencial.builder()
-                .usuario(usuarioAdmin).correo("admin@sistema.edu.pe")
-                .password(password).build());
+        Usuario usuarioCliente = usuarioRepository.findByDni("70000002").orElseGet(() ->
+                usuarioRepository.save(Usuario.builder()
+                        .nombres("Johan").apellidos("Joseph").dni("70000002")
+                        .telefono("988777666").direccion("Calle Las Pruebas 404, SJL").activo(true).build()));
+        if (credencialRepository.findByCorreo("johan@cliente.pe").isEmpty()) {
+            credencialRepository.save(Credencial.builder()
+                    .usuario(usuarioCliente).correo("johan@cliente.pe").password(password).activo(true).build());
+            usuarioRolRepository.save(UsuarioRol.builder().usuario(usuarioCliente).rol(cliente).build());
+        }
 
-        usuarioRolRepository.save(UsuarioRol.builder().usuario(usuarioAdmin).rol(admin).build());
+        Usuario usuarioRepartidor = usuarioRepository.findByDni("70000003").orElseGet(() ->
+                usuarioRepository.save(Usuario.builder()
+                        .nombres("Carlos").apellidos("Repartidor").dni("70000003")
+                        .telefono("977666555").direccion("Av. Reparto 456, Comas").activo(true).build()));
+        if (credencialRepository.findByCorreo("repartidor@sistema.edu.pe").isEmpty()) {
+            credencialRepository.save(Credencial.builder()
+                    .usuario(usuarioRepartidor).correo("repartidor@sistema.edu.pe").password(password).activo(true).build());
+            usuarioRolRepository.save(UsuarioRol.builder().usuario(usuarioRepartidor).rol(repartidor).build());
+        }
 
-        Usuario usuarioCliente = usuarioRepository.save(Usuario.builder()
-                .nombres("johan").apellidos("joseph").dni("70000002")
-                .telefono("988777666").direccion("Calle Las Pruebas 404").build());
+        log.info("=== Datos semilla inicializados correctamente ===");
+        log.info("  Usuarios: admin@sistema.edu.pe / johan@cliente.pe / repartidor@sistema.edu.pe  (password: 123456)");
+        log.info("  Categorías: {} | Marcas: {} | Proveedores: {} | Productos: {}",
+                categoriaRepository.count(), marcaRepository.count(), proveedorRepository.count(), productoRepository.count());
+        log.info("================================================");
+    }
 
-        credencialRepository.save(Credencial.builder()
-                .usuario(usuarioCliente).correo("johan@cliente.pe")
-                .password(password).build());
+    private Rol findOrCreateRol(String nombre, String descripcion) {
+        return rolRepository.findByNombre(nombre).orElseGet(() ->
+                rolRepository.save(Rol.builder().nombre(nombre).descripcion(descripcion).activo(true).build()));
+    }
 
-        usuarioRolRepository.save(UsuarioRol.builder().usuario(usuarioCliente).rol(cliente).build());
+    private MetodoPago findOrCreateMetodoPago(String nombre, String descripcion) {
+        return metodoPagoRepository.findByNombre(nombre).orElseGet(() ->
+                metodoPagoRepository.save(MetodoPago.builder().nombre(nombre).descripcion(descripcion).activo(true).build()));
+    }
 
-        Usuario usuarioRepartidor = usuarioRepository.save(Usuario.builder()
-                .nombres("Carlos").apellidos("Repartidor").dni("70000003")
-                .telefono("977666555").direccion("Av. Reparto 456").build());
+    private EstadoVenta findOrCreateEstadoVenta(String nombre, String descripcion) {
+        return estadoVentaRepository.findByNombre(nombre).orElseGet(() ->
+                estadoVentaRepository.save(EstadoVenta.builder().nombre(nombre).descripcion(descripcion).build()));
+    }
 
-        credencialRepository.save(Credencial.builder()
-                .usuario(usuarioRepartidor).correo("repartidor@sistema.edu.pe")
-                .password(password).build());
+    private EstadoPedido findOrCreateEstadoPedido(String nombre, String descripcion) {
+        return estadoPedidoRepository.findByNombre(nombre).orElseGet(() ->
+                estadoPedidoRepository.save(EstadoPedido.builder().nombre(nombre).descripcion(descripcion).build()));
+    }
 
-        usuarioRolRepository.save(UsuarioRol.builder().usuario(usuarioRepartidor).rol(repartidor).build());
+    private EstadoEnvio findOrCreateEstadoEnvio(String nombre, String descripcion) {
+        return estadoEnvioRepository.findByNombre(nombre).orElseGet(() ->
+                estadoEnvioRepository.save(EstadoEnvio.builder().nombre(nombre).descripcion(descripcion).build()));
+    }
 
-        log.info("Datos semilla inicializados correctamente");
-        log.info("  Admin: admin@sistema.edu.pe / 123456");
-        log.info("  Cliente: johan@cliente.pe / 123456");
-        log.info(" / 123456");
+    private Categoria findOrCreateCategoria(String nombre, String descripcion) {
+        return categoriaRepository.findByNombre(nombre).orElseGet(() ->
+                categoriaRepository.save(Categoria.builder().nombre(nombre).descripcion(descripcion).activo(true).build()));
+    }
+
+    private Marca findOrCreateMarca(String nombre, String descripcion) {
+        return marcaRepository.findByNombre(nombre).orElseGet(() ->
+                marcaRepository.save(Marca.builder().nombre(nombre).descripcion(descripcion).activo(true).build()));
+    }
+
+    private Proveedor findOrCreateProveedor(String razonSocial, String ruc, String telefono, String correo, String direccion) {
+        return proveedorRepository.findByRuc(ruc).orElseGet(() ->
+                proveedorRepository.save(Proveedor.builder()
+                        .razonSocial(razonSocial).ruc(ruc).telefono(telefono)
+                        .correo(correo).direccion(direccion).activo(true).build()));
+    }
+
+    private Producto findOrCreateProducto(String codigo, String nombre, String descripcion,
+                                         String precioCompra, String precioVenta,
+                                         int stock, int stockMinimo,
+                                         Categoria categoria, Marca marca, Proveedor proveedor) {
+        return productoRepository.findByCodigo(codigo).orElseGet(() ->
+                productoRepository.save(Producto.builder()
+                        .codigo(codigo).nombre(nombre).descripcion(descripcion)
+                        .precioCompra(new BigDecimal(precioCompra)).precioVenta(new BigDecimal(precioVenta))
+                        .stock(stock).stockMinimo(stockMinimo)
+                        .categoria(categoria).marca(marca).proveedor(proveedor).activo(true).build()));
     }
 }
