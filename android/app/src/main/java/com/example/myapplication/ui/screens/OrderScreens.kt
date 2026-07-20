@@ -7,8 +7,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -403,6 +405,75 @@ fun OrderDetailScreen(
             }
 
             envio?.let { e ->
+                val envioNombre = e.estadoEnvio?.nombre ?: ""
+                val envioStatusColor = when (envioNombre) {
+                    "PENDIENTE" -> Color(0xFFFFA000)
+                    "EN_RUTA" -> Color(0xFF1976D2)
+                    "ENTREGADO" -> Color(0xFF388E3C)
+                    "CANCELADO" -> Color(0xFFD32F2F)
+                    else -> Color.Gray
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "Progreso del Envío",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        val progress = when (envioNombre) {
+                            "PENDIENTE" -> 0.33f
+                            "EN_RUTA" -> 0.66f
+                            "ENTREGADO" -> 1f
+                            else -> 0f
+                        }
+                        val progressColor = when (envioNombre) {
+                            "CANCELADO" -> Color(0xFFD32F2F)
+                            else -> Color(0xFF1976D2)
+                        }
+
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.fillMaxWidth().height(8.dp),
+                            color = progressColor,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            listOf("Pendiente", "En camino", "Entregado").forEachIndexed { i, label ->
+                                val step = (i + 1) * 0.33f
+                                val isActive = progress >= step
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        imageVector = when {
+                                            isActive -> Icons.Default.CheckCircle
+                                            envioNombre == "CANCELADO" -> Icons.Default.Cancel
+                                            else -> Icons.Default.Schedule
+                                        },
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = if (isActive) Color(0xFF1976D2) else if (envioNombre == "CANCELADO") Color(0xFFD32F2F) else Color.Gray
+                                    )
+                                    Text(
+                                        label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (isActive) Color(0xFF1976D2) else if (envioNombre == "CANCELADO" && !isActive) Color(0xFFD32F2F).copy(alpha = 0.5f) else Color.Gray,
+                                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp)
@@ -418,15 +489,8 @@ fun OrderDetailScreen(
                         Text("Distrito: ${e.distrito}")
                         if (e.referencia != null) Text("Referencia: ${e.referencia}")
                         if (e.repartidor != null) Text("Repartidor: ${e.repartidor}")
-                        val envioStatusColor = when (e.estadoEnvio?.nombre) {
-                            "PENDIENTE" -> Color(0xFFFFA000)
-                            "EN_RUTA" -> Color(0xFF1976D2)
-                            "ENTREGADO" -> Color(0xFF388E3C)
-                            "CANCELADO" -> Color(0xFFD32F2F)
-                            else -> Color.Gray
-                        }
                         Text(
-                            "Estado: ${formatearEstadoEnvio(e.estadoEnvio?.nombre ?: "")}",
+                            "Estado: ${formatearEstadoEnvio(envioNombre)}",
                             color = envioStatusColor,
                             fontWeight = FontWeight.Medium
                         )

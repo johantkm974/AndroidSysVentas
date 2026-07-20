@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.model.*
 import com.example.myapplication.repository.OrderRepository
+import com.example.myapplication.repository.UserRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +20,10 @@ enum class PaymentMethod(val displayName: String, val icon: String) {
     YAPE_PLIN("Yape/Plin", "📱")
 }
 
-class CartViewModel(private val repository: OrderRepository) : ViewModel() {
+class CartViewModel(
+    private val repository: OrderRepository,
+    private val userRepository: UserRepository
+) : ViewModel() {
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
     val cartItems: StateFlow<List<CartItem>> = _cartItems
 
@@ -43,8 +47,25 @@ class CartViewModel(private val repository: OrderRepository) : ViewModel() {
     private val _distrito = MutableStateFlow("")
     val distrito: StateFlow<String> = _distrito
 
-    fun updateDireccion(value: String) { _direccion.value = value }
-    fun updateDistrito(value: String) { _distrito.value = value }
+    fun loadUserProfile() {
+        viewModelScope.launch {
+            userRepository.getProfile().onSuccess { user ->
+                if (_direccion.value.isBlank() && !user.direccion.isNullOrBlank()) {
+                    _direccion.value = user.direccion
+                }
+            }
+        }
+    }
+
+    fun updateDireccion(value: String) {
+        _direccion.value = value
+        if (_checkoutState.value is CheckoutState.Error) _checkoutState.value = CheckoutState.Idle
+    }
+
+    fun updateDistrito(value: String) {
+        _distrito.value = value
+        if (_checkoutState.value is CheckoutState.Error) _checkoutState.value = CheckoutState.Idle
+    }
 
     fun resetCheckoutState() {
         _checkoutState.value = CheckoutState.Idle
@@ -70,6 +91,7 @@ class CartViewModel(private val repository: OrderRepository) : ViewModel() {
     }
 
     fun checkout(observacion: String) {
+        _checkoutState.value = CheckoutState.Idle
         if (_cartItems.value.isEmpty()) {
             _checkoutState.value = CheckoutState.Error("El carrito está vacío")
             return

@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
                     val categoriaViewModel: CategoriaViewModel = viewModel(factory = createFactory { CategoriaViewModel(apiService) })
                     val marcaViewModel: MarcaViewModel = viewModel(factory = createFactory { MarcaViewModel(apiService) })
                     val proveedorViewModel: ProveedorViewModel = viewModel(factory = createFactory { ProveedorViewModel(apiService) })
-                    val cartViewModel: CartViewModel = viewModel(factory = createFactory { CartViewModel(orderRepository) })
+                    val cartViewModel: CartViewModel = viewModel(factory = createFactory { CartViewModel(orderRepository, userRepository) })
                     val ventaViewModel: VentaViewModel = viewModel(factory = createFactory { VentaViewModel(ventaRepository) })
                     val deliveryViewModel: DeliveryViewModel = viewModel(factory = createFactory { DeliveryViewModel(deliveryRepository) })
 

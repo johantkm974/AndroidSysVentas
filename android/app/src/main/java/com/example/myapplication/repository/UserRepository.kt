@@ -57,4 +57,13 @@ class UserRepository(private val apiService: ApiService) {
             Result.failure(e)
         }
     }
+
+    suspend fun getProfile(): Result<UsuarioResponse> {
+        return try {
+            val response = apiService.perfil()
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
