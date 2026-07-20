@@ -327,6 +327,11 @@ public class PedidoServiceImpl implements PedidoService {
 
         Envio envio = envioRepository.findByPedidoIdPedido(pedido.getIdPedido()).orElse(null);
 
+        String repartidorNombre = null;
+        if (envio != null && envio.getRepartidor() != null) {
+            repartidorNombre = envio.getRepartidor().getNombres() + " " + envio.getRepartidor().getApellidos();
+        }
+
         return PedidoResponse.builder()
                 .idPedido(pedido.getIdPedido())
                 .numeroPedido(pedido.getNumeroPedido())
@@ -338,6 +343,7 @@ public class PedidoServiceImpl implements PedidoService {
                 .detalles(detalles)
                 .idEnvio(envio != null ? envio.getIdEnvio() : null)
                 .estadoEnvio(envio != null ? envio.getEstadoEnvio().getNombre() : null)
+                .repartidor(repartidorNombre)
                 .build();
     }
 }

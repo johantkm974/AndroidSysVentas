@@ -140,7 +140,13 @@ fun NavGraph(
             arguments = listOf(navArgument("id") { type = NavType.LongType })
         ) { backStackEntry ->
             val id = backStackEntry.arguments?.getLong("id") ?: 0L
-            DeliveryDetailScreen(id, deliveryViewModel, navController)
+            val userState by loginViewModel.uiState.collectAsState()
+            val isRepartidor = if (userState is LoginUiState.Success) {
+                (userState as LoginUiState.Success).roles.contains("ROLE_REPARTIDOR")
+            } else {
+                false
+            }
+            DeliveryDetailScreen(id, deliveryViewModel, navController, isRepartidor)
         }
         composable(Screen.AdminEnvios.route) {
             AdminEnviosScreen(deliveryViewModel, navController)

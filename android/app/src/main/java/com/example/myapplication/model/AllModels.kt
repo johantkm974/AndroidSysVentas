@@ -136,7 +136,8 @@ data class PedidoResponse(
     val createdAt: String?,
     val detalles: List<DetallePedidoResponse>?,
     val idEnvio: Long? = null,
-    val estadoEnvio: String? = null
+    val estadoEnvio: String? = null,
+    val repartidor: String? = null
 )
 
 data class DetallePedidoResponse(

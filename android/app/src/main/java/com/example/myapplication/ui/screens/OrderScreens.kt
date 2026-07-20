@@ -1,8 +1,10 @@
 package com.example.myapplication.ui.screens
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -30,6 +32,11 @@ fun OrderListScreen(viewModel: OrderViewModel, navController: NavController, isA
     val assignError by viewModel.assignError.collectAsState()
     var showRepartidorDialog by remember { mutableStateOf(false) }
     var selectedPedidoId by remember { mutableLongStateOf(0L) }
+    var selectedFilter by remember { mutableStateOf<String?>(null) }
+
+    val estados = listOf("PENDIENTE", "CONFIRMADO", "PREPARANDO", "ENVIADO", "ENTREGADO", "CANCELADO")
+    val filteredOrders = if (selectedFilter == null) orders
+        else orders.filter { it.estado == selectedFilter }
 
     LaunchedEffect(Unit) {
         if (isAdminOrSeller) {
@@ -100,38 +107,65 @@ fun OrderListScreen(viewModel: OrderViewModel, navController: NavController, isA
             )
         }
     ) { padding ->
-        if (orders.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    "No hay pedidos disponibles",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.padding(padding),
-                contentPadding = PaddingValues(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(orders) { order ->
-                    OrderListItem(
-                        order = order,
-                        isAdminOrSeller = isAdminOrSeller,
-                        onAssignRepartidor = {
-                            selectedPedidoId = order.idPedido
-                            showRepartidorDialog = true
-                        },
-                        onCancel = { viewModel.cancelOrder(order.idPedido) },
-                        onClickDetail = {
-                            navController.navigate("order_detail/${order.idPedido}")
-                        }
+        Column(modifier = Modifier.padding(padding)) {
+            if (isAdminOrSeller) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedFilter == null,
+                        onClick = { selectedFilter = null },
+                        label = { Text("Todos (${orders.size})") }
                     )
+                    estados.forEach { estado ->
+                        val count = orders.count { it.estado == estado }
+                        if (count > 0) {
+                            FilterChip(
+                                selected = selectedFilter == estado,
+                                onClick = { selectedFilter = if (selectedFilter == estado) null else estado },
+                                label = { Text("$estado ($count)") }
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (filteredOrders.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        if (orders.isEmpty()) "No hay pedidos disponibles"
+                        else "No hay pedidos con este estado",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(filteredOrders) { order ->
+                        OrderListItem(
+                            order = order,
+                            isAdminOrSeller = isAdminOrSeller,
+                            onAssignRepartidor = {
+                                selectedPedidoId = order.idPedido
+                                showRepartidorDialog = true
+                            },
+                            onCancel = { viewModel.cancelOrder(order.idPedido) },
+                            onClickDetail = {
+                                navController.navigate("order_detail/${order.idPedido}")
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -211,6 +245,41 @@ fun OrderListItem(
                         "Envío: ${formatearEstadoEnvio(order.estadoEnvio)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = envioStatusColor ?: Color.Gray,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+            if (order.repartidor != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "Repartidor: ${order.repartidor}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            } else if (order.estadoEnvio != null && order.estado != "CANCELADO" && order.estado != "ENTREGADO") {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "Sin repartidor asignado",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Medium
                     )
                 }

@@ -20,6 +20,7 @@ public class PedidoResponse {
     private List<DetallePedidoResponse> detalles;
     private Long idEnvio;
     private String estadoEnvio;
+    private String repartidor;
 
     @Data @AllArgsConstructor @Builder
     public static class DetallePedidoResponse {

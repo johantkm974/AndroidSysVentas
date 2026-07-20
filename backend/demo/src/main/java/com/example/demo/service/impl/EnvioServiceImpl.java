@@ -89,12 +89,29 @@ public class EnvioServiceImpl implements EnvioService {
 
     @Override
     @Transactional
-    public EnvioResponse actualizarEstado(Long idEnvio, Long idEstadoEnvio, String observacion) {
+    public EnvioResponse actualizarEstado(Long idEnvio, Long idEstadoEnvio, String observacion, Long idUsuario, String rol) {
         Envio envio = envioRepository.findById(idEnvio)
                 .orElseThrow(() -> new ResourceNotFoundException("Envío no encontrado: " + idEnvio));
 
         EstadoEnvio nuevoEstado = estadoEnvioRepository.findById(idEstadoEnvio)
                 .orElseThrow(() -> new ResourceNotFoundException("Estado de envío no encontrado: " + idEstadoEnvio));
+
+        // Validar que el repartidor solo pueda cambiar envíos asignados a él
+        if ("ROLE_REPARTIDOR".equals(rol)) {
+            if (envio.getRepartidor() == null) {
+                throw new BadRequestException("No puedes modificar un envío que no tiene repartidor asignado");
+            }
+            if (!envio.getRepartidor().getIdUsuario().equals(idUsuario)) {
+                throw new BadRequestException("Solo puedes modificar envíos asignados a ti");
+            }
+        }
+
+        // Validar que no se pueda poner en ruta o entregar sin repartidor
+        String estadoNombre = nuevoEstado.getNombre();
+        if (("EN_RUTA".equals(estadoNombre) || "ENTREGADO".equals(estadoNombre))
+                && envio.getRepartidor() == null) {
+            throw new BadRequestException("No se puede cambiar a " + estadoNombre + " sin un repartidor asignado");
+        }
 
         envio.setEstadoEnvio(nuevoEstado);
         Pedido pedido = envio.getPedido();

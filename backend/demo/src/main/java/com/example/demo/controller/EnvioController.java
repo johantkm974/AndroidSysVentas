@@ -62,8 +62,11 @@ public class EnvioController {
     @PatchMapping("/{id}/estado")
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'REPARTIDOR')")
     public ResponseEntity<EnvioResponse> actualizarEstado(@PathVariable Long id,
-                                                    @Valid @RequestBody ActualizarEstadoEnvioRequest request) {
-        return ResponseEntity.ok(envioService.actualizarEstado(id, request.getIdEstadoEnvio(), request.getObservacion()));
+                                                    @Valid @RequestBody ActualizarEstadoEnvioRequest request,
+                                                    Authentication authentication) {
+        Long idUsuario = (Long) authentication.getCredentials();
+        String rol = authentication.getAuthorities().iterator().next().getAuthority();
+        return ResponseEntity.ok(envioService.actualizarEstado(id, request.getIdEstadoEnvio(), request.getObservacion(), idUsuario, rol));
     }
 
     @PatchMapping("/{id}/asignar-repartidor/{idRepartidor}")

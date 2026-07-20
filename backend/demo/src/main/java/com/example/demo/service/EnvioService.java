@@ -12,7 +12,7 @@ public interface EnvioService {
     EnvioResponse obtenerPorId(Long id);
     EnvioResponse obtenerPorPedido(Long idPedido);
     EnvioResponse crear(EnvioRequest request);
-    EnvioResponse actualizarEstado(Long idEnvio, Long idEstadoEnvio, String observacion);
+    EnvioResponse actualizarEstado(Long idEnvio, Long idEstadoEnvio, String observacion, Long idUsuario, String rol);
     List<SeguimientoResponse> obtenerTracking(Long idEnvio);
     List<EnvioResponse> listarPorRepartidor(Long idRepartidor);
     EnvioResponse asignarRepartidor(Long idEnvio, Long idRepartidor);

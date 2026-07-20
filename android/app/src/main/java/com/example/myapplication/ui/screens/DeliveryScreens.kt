@@ -115,7 +115,8 @@ fun DeliveryCard(envio: EnvioResponse, onViewDetail: () -> Unit) {
 fun DeliveryDetailScreen(
     envioId: Long,
     viewModel: DeliveryViewModel,
-    navController: NavController
+    navController: NavController,
+    isRepartidor: Boolean = false
 ) {
     val envio by viewModel.selectedEnvio.collectAsState()
     val tracking by viewModel.tracking.collectAsState()
@@ -173,7 +174,7 @@ fun DeliveryDetailScreen(
                     )
                 }
 
-                if (estadoActual == "PENDIENTE" && !isLoading) {
+                if (isRepartidor && estadoActual == "PENDIENTE" && !isLoading) {
                     Button(
                         onClick = { viewModel.updateToInRoute(envioId) },
                         modifier = Modifier.fillMaxWidth(),
@@ -185,7 +186,7 @@ fun DeliveryDetailScreen(
                     }
                 }
 
-                if (estadoActual == "EN_RUTA" && !isLoading) {
+                if (isRepartidor && estadoActual == "EN_RUTA" && !isLoading) {
                     Button(
                         onClick = { viewModel.updateToDelivered(envioId) },
                         modifier = Modifier.fillMaxWidth(),
