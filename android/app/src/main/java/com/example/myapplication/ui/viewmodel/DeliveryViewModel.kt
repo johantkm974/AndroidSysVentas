@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.model.*
 import com.example.myapplication.repository.DeliveryRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -20,6 +21,9 @@ class DeliveryViewModel(private val repository: DeliveryRepository) : ViewModel(
 
     private val _selectedEnvio = MutableStateFlow<EnvioResponse?>(null)
     val selectedEnvio: StateFlow<EnvioResponse?> = _selectedEnvio
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
 
     fun loadMyDeliveries() {
         viewModelScope.launch {
@@ -47,19 +51,29 @@ class DeliveryViewModel(private val repository: DeliveryRepository) : ViewModel(
 
     fun updateToInRoute(idEnvio: Long) {
         viewModelScope.launch {
+            _isLoading.value = true
+            delay(5000)
             repository.updateStatus(idEnvio, 2, "Repartidor en camino").onSuccess {
+                loadEnvio(idEnvio)
+                loadTracking(idEnvio)
                 loadMyDeliveries()
                 loadAllEnvios()
             }
+            _isLoading.value = false
         }
     }
 
     fun updateToDelivered(idEnvio: Long) {
         viewModelScope.launch {
+            _isLoading.value = true
+            delay(5000)
             repository.updateStatus(idEnvio, 3, "Paquete entregado").onSuccess {
+                loadEnvio(idEnvio)
+                loadTracking(idEnvio)
                 loadMyDeliveries()
                 loadAllEnvios()
             }
+            _isLoading.value = false
         }
     }
 

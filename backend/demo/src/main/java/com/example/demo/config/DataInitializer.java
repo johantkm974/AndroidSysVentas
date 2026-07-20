@@ -136,6 +136,6 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Datos semilla inicializados correctamente");
         log.info("  Admin: admin@sistema.edu.pe / 123456");
         log.info("  Cliente: johan@cliente.pe / 123456");
-        log.info("  Repartidor: repartidor@sistema.edu.pe / 123456");
+        log.info(" / 123456");
     }
 }

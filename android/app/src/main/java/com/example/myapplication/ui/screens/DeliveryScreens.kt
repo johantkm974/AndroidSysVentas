@@ -119,6 +119,7 @@ fun DeliveryDetailScreen(
 ) {
     val envio by viewModel.selectedEnvio.collectAsState()
     val tracking by viewModel.tracking.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     LaunchedEffect(envioId) {
         viewModel.loadEnvio(envioId)
@@ -163,7 +164,16 @@ fun DeliveryDetailScreen(
                     }
                 }
 
-                if (estadoActual == "PENDIENTE") {
+                if (isLoading) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        if (estadoActual == "PENDIENTE") "🚚 Repartidor en camino..." else "📦 Entregando paquete...",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                if (estadoActual == "PENDIENTE" && !isLoading) {
                     Button(
                         onClick = { viewModel.updateToInRoute(envioId) },
                         modifier = Modifier.fillMaxWidth(),
@@ -175,7 +185,7 @@ fun DeliveryDetailScreen(
                     }
                 }
 
-                if (estadoActual == "EN_RUTA") {
+                if (estadoActual == "EN_RUTA" && !isLoading) {
                     Button(
                         onClick = { viewModel.updateToDelivered(envioId) },
                         modifier = Modifier.fillMaxWidth(),
