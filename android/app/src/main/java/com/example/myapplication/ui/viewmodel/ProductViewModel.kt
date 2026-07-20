@@ -7,6 +7,7 @@ import com.example.myapplication.model.Marca
 import com.example.myapplication.model.ProductoRequest
 import com.example.myapplication.model.ProductoResponse
 import com.example.myapplication.model.Proveedor
+import com.example.myapplication.repository.HttpErrorParser
 import com.example.myapplication.repository.ProductRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +16,7 @@ import kotlinx.coroutines.launch
 sealed class ProductUiState {
     object Loading : ProductUiState()
     data class Success(val products: List<ProductoResponse>) : ProductUiState()
-    data class Error(val message: String) : ProductUiState()
+    data class Error(val message: String, val isConnectionError: Boolean = false) : ProductUiState()
 }
 
 class ProductViewModel(private val repository: ProductRepository) : ViewModel() {
@@ -34,6 +35,12 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
 
     private val _selectedCategoryId = MutableStateFlow<Long?>(null)
     val selectedCategoryId: StateFlow<Long?> = _selectedCategoryId
+
+    private val _createError = MutableStateFlow<String?>(null)
+    val createError: StateFlow<String?> = _createError
+
+    private val _createSuccess = MutableStateFlow(false)
+    val createSuccess: StateFlow<Boolean> = _createSuccess
 
     fun loadCategories() {
         viewModelScope.launch {
@@ -64,7 +71,12 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
             _uiState.value = ProductUiState.Loading
             repository.listActiveProducts()
                 .onSuccess { products -> _uiState.value = ProductUiState.Success(products) }
-                .onFailure { error -> _uiState.value = ProductUiState.Error(error.message ?: "Error al cargar productos") }
+                .onFailure { error ->
+                    _uiState.value = ProductUiState.Error(
+                        HttpErrorParser.parse(error),
+                        HttpErrorParser.isConnectionError(error)
+                    )
+                }
         }
     }
 
@@ -77,7 +89,12 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
             } else {
                 repository.listByCategory(categoryId)
                     .onSuccess { products -> _uiState.value = ProductUiState.Success(products) }
-                    .onFailure { error -> _uiState.value = ProductUiState.Error(error.message ?: "Error al cargar productos") }
+                    .onFailure { error ->
+                        _uiState.value = ProductUiState.Error(
+                            HttpErrorParser.parse(error),
+                            HttpErrorParser.isConnectionError(error)
+                        )
+                    }
             }
         }
     }
@@ -86,13 +103,21 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
         _uiState.value = ProductUiState.Loading
         repository.listProducts()
             .onSuccess { products -> _uiState.value = ProductUiState.Success(products) }
-            .onFailure { error -> _uiState.value = ProductUiState.Error(error.message ?: "Error al cargar productos") }
+            .onFailure { error ->
+                _uiState.value = ProductUiState.Error(
+                    HttpErrorParser.parse(error),
+                    HttpErrorParser.isConnectionError(error)
+                )
+            }
     }
 
     fun deleteProduct(id: Long) {
         viewModelScope.launch {
             repository.deleteProduct(id)
                 .onSuccess { loadAllProducts() }
+                .onFailure { error ->
+                    _createError.value = HttpErrorParser.parse(error)
+                }
         }
     }
 
@@ -101,16 +126,10 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
             repository.deleteProductPermanently(id)
                 .onSuccess { loadAllProducts() }
                 .onFailure { error ->
-                    _createError.value = error.message ?: "Error al eliminar permanentemente"
+                    _createError.value = HttpErrorParser.parse(error)
                 }
         }
     }
-
-    private val _createError = MutableStateFlow<String?>(null)
-    val createError: StateFlow<String?> = _createError
-
-    private val _createSuccess = MutableStateFlow(false)
-    val createSuccess: StateFlow<Boolean> = _createSuccess
 
     fun createProduct(request: ProductoRequest) {
         _createError.value = null
@@ -122,7 +141,7 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
                     loadAllProducts()
                 }
                 .onFailure { error ->
-                    _createError.value = error.message ?: "Error al crear producto"
+                    _createError.value = HttpErrorParser.parse(error)
                 }
         }
     }
@@ -137,7 +156,7 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
                     loadAllProducts()
                 }
                 .onFailure { error ->
-                    _createError.value = error.message ?: "Error al actualizar producto"
+                    _createError.value = HttpErrorParser.parse(error)
                 }
         }
     }

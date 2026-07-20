@@ -1,5 +1,7 @@
 package com.example.myapplication.ui.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -17,8 +19,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import android.util.Patterns
@@ -29,6 +33,8 @@ import androidx.navigation.NavController
 import com.example.myapplication.model.RegisterRequest
 import com.example.myapplication.model.UpdateUserRequest
 import com.example.myapplication.navigation.Screen
+import com.example.myapplication.ui.components.ErrorScreen
+import com.example.myapplication.ui.components.LoadingScreen
 import com.example.myapplication.ui.viewmodel.UserViewModel
 import com.example.myapplication.ui.viewmodel.DashboardViewModel
 
@@ -417,6 +423,9 @@ fun EditUserScreen(id: Long, viewModel: UserViewModel, navController: NavControl
 @Composable
 fun AdminDashboardScreen(viewModel: DashboardViewModel, navController: NavController) {
     val data by viewModel.dashboardData.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val isConnectionError by viewModel.isConnectionError.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.loadDashboard() }
 
@@ -437,49 +446,184 @@ fun AdminDashboardScreen(viewModel: DashboardViewModel, navController: NavContro
             )
         }
     ) { padding ->
-        if (data == null) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else {
-            val resumen = data!!.resumen
-            Column(
-                modifier = Modifier
-                    .padding(padding)
-                    .padding(16.dp)
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                DashboardCard(icon = Icons.Default.TrendingUp, title = "Ingresos del Mes", value = "S/ ${resumen.ingresosDelMes}", color = MaterialTheme.colorScheme.primary)
-                DashboardCard(icon = Icons.Default.ShoppingCart, title = "Ventas del Mes", value = "${resumen.totalVentasDelMes}", color = MaterialTheme.colorScheme.primary)
-                DashboardCard(icon = Icons.Default.PendingActions, title = "Pedidos Pendientes", value = "${resumen.totalPedidosPendientes}", color = MaterialTheme.colorScheme.tertiary)
-                DashboardCard(icon = Icons.Default.LocalShipping, title = "Envíos Pendientes", value = "${resumen.totalEnviosPendientes}", color = Color(0xFFFFA000))
-                DashboardCard(icon = Icons.Default.Inventory, title = "Total Productos", value = "${resumen.totalProductos}", color = MaterialTheme.colorScheme.secondary)
-                DashboardCard(icon = Icons.Default.People, title = "Total Usuarios", value = "${resumen.totalUsuarios}", color = MaterialTheme.colorScheme.secondary)
+        when {
+            isLoading -> LoadingScreen("Cargando dashboard...")
+            errorMessage != null -> ErrorScreen(
+                message = errorMessage ?: "Error",
+                isConnectionError = isConnectionError
+            ) { viewModel.loadDashboard() }
+            data == null -> ErrorScreen(message = "No se pudieron cargar los datos") { viewModel.loadDashboard() }
+            else -> {
+                val resumen = data!!.resumen
+                Column(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                if (data!!.productosStockBajo.isNotEmpty()) {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    Text("Productos con Stock Bajo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    data!!.productosStockBajo.forEach { prod ->
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                            modifier = Modifier.fillMaxWidth()
+                    Text(
+                        "Resumen General",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        DashboardStatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.TrendingUp,
+                            title = "Ingresos",
+                            value = "S/ ${resumen.ingresosDelMes}",
+                            color = Color(0xFF2E7D32)
+                        )
+                        DashboardStatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.ShoppingCart,
+                            title = "Ventas",
+                            value = "${resumen.totalVentasDelMes}",
+                            color = Color(0xFF1565C0)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        DashboardStatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Inventory,
+                            title = "Productos",
+                            value = "${resumen.totalProductos}",
+                            color = Color(0xFF6A1B9A)
+                        )
+                        DashboardStatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.People,
+                            title = "Usuarios",
+                            value = "${resumen.totalUsuarios}",
+                            color = Color(0xFF00838F)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        "Accesos Rápidos",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    DashboardActionCard(
+                        icon = Icons.Default.PendingActions,
+                        title = "Pedidos Pendientes",
+                        subtitle = "${resumen.totalPedidosPendientes} pedidos por procesar",
+                        color = Color(0xFFFFA000),
+                        onClick = { navController.navigate(Screen.OrderListFiltered.createRoute("PENDIENTE")) }
+                    )
+                    DashboardActionCard(
+                        icon = Icons.Default.LocalShipping,
+                        title = "Envíos Pendientes",
+                        subtitle = "${resumen.totalEnviosPendientes} envíos por entregar",
+                        color = Color(0xFFE65100),
+                        onClick = { navController.navigate(Screen.AdminEnvios.route) }
+                    )
+                    DashboardActionCard(
+                        icon = Icons.Default.Inventory,
+                        title = "Gestión de Productos",
+                        subtitle = "Administrar catálogo",
+                        color = Color(0xFF6A1B9A),
+                        onClick = { navController.navigate(Screen.InventoryManagement.route) }
+                    )
+                    DashboardActionCard(
+                        icon = Icons.Default.People,
+                        title = "Gestión de Usuarios",
+                        subtitle = "Administrar usuarios",
+                        color = Color(0xFF00838F),
+                        onClick = { navController.navigate(Screen.UserManagement.route) }
+                    )
+
+                    if (data!!.productosStockBajo.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Stock Bajo (${data!!.productosStockBajo.size})",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        data!!.productosStockBajo.forEach { prod ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                                )
                             ) {
-                                Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column {
-                                    Text(prod.nombre, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                                    Text("Stock: ${prod.stock} (Mín: ${prod.stockMinimo})", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                Icons.Default.Warning,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(prod.nombre, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                        Text("Código: ${prod.codigo}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text("${prod.stock}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                                        Text("Mín: ${prod.stockMinimo}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                 }
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
@@ -487,37 +631,87 @@ fun AdminDashboardScreen(viewModel: DashboardViewModel, navController: NavContro
 }
 
 @Composable
-fun DashboardCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+fun DashboardStatCard(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
     title: String,
     value: String,
-    color: androidx.compose.ui.graphics.Color
+    color: Color
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    Card(
+        modifier = modifier
+            .height(100.dp)
+            .scale(scale),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(title, style = MaterialTheme.typography.labelSmall, color = color.copy(alpha = 0.8f))
+            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color)
+        }
+    }
+}
+
+@Composable
+fun DashboardActionCard(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    color: Color,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = color.copy(alpha = 0.12f),
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(48.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(28.dp))
+                    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
                 }
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(title, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = color)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

@@ -17,9 +17,27 @@ class UserViewModel(private val repository: UserRepository) : ViewModel() {
     private val _availableRoles = MutableStateFlow<List<RoleResponse>>(emptyList())
     val availableRoles: StateFlow<List<RoleResponse>> = _availableRoles
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    private val _isConnectionError = MutableStateFlow(false)
+    val isConnectionError: StateFlow<Boolean> = _isConnectionError
+
     fun loadUsers() {
         viewModelScope.launch {
-            repository.listUsers().onSuccess { _users.value = it }
+            _isLoading.value = true
+            _errorMessage.value = null
+            _isConnectionError.value = false
+            repository.listUsers()
+                .onSuccess { _users.value = it }
+                .onFailure { e ->
+                    _errorMessage.value = HttpErrorParser.parse(e)
+                    _isConnectionError.value = HttpErrorParser.isConnectionError(e)
+                }
+            _isLoading.value = false
         }
     }
 
@@ -32,34 +50,51 @@ class UserViewModel(private val repository: UserRepository) : ViewModel() {
             RoleResponse(5, "ROLE_REPARTIDOR", "Repartidor")
         )
         _availableRoles.value = mockRoles
-        
+
         viewModelScope.launch {
-            repository.listRoles().onSuccess { 
-                if (it.isNotEmpty()) _availableRoles.value = it 
+            repository.listRoles().onSuccess {
+                if (it.isNotEmpty()) _availableRoles.value = it
             }
         }
     }
 
     fun deleteUser(id: Long) {
         viewModelScope.launch {
-            repository.deleteUser(id).onSuccess { loadUsers() }
+            repository.deleteUser(id)
+                .onSuccess { loadUsers() }
+                .onFailure { e ->
+                    _errorMessage.value = HttpErrorParser.parse(e)
+                }
         }
     }
 
     fun updateUser(id: Long, request: UpdateUserRequest) {
         viewModelScope.launch {
-            repository.updateUser(id, request).onSuccess { loadUsers() }
+            repository.updateUser(id, request)
+                .onSuccess { loadUsers() }
+                .onFailure { e ->
+                    _errorMessage.value = HttpErrorParser.parse(e)
+                }
         }
     }
 
     fun createUser(request: RegisterRequest) {
         viewModelScope.launch {
-            repository.createUser(request).onSuccess { loadUsers() }
+            repository.createUser(request)
+                .onSuccess { loadUsers() }
+                .onFailure { e ->
+                    _errorMessage.value = HttpErrorParser.parse(e)
+                }
         }
     }
 
     suspend fun getUserById(id: Long): UsuarioResponse? {
         return repository.getUserById(id).getOrNull()
+    }
+
+    fun clearError() {
+        _errorMessage.value = null
+        _isConnectionError.value = false
     }
 }
 
@@ -85,15 +120,42 @@ class OrderViewModel(
     private val _tracking = MutableStateFlow<List<SeguimientoResponse>>(emptyList())
     val tracking: StateFlow<List<SeguimientoResponse>> = _tracking
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    private val _isConnectionError = MutableStateFlow(false)
+    val isConnectionError: StateFlow<Boolean> = _isConnectionError
+
     fun loadAllOrders() {
         viewModelScope.launch {
-            repository.listAllOrders().onSuccess { _orders.value = it }
+            _isLoading.value = true
+            _errorMessage.value = null
+            _isConnectionError.value = false
+            repository.listAllOrders()
+                .onSuccess { _orders.value = it }
+                .onFailure { e ->
+                    _errorMessage.value = HttpErrorParser.parse(e)
+                    _isConnectionError.value = HttpErrorParser.isConnectionError(e)
+                }
+            _isLoading.value = false
         }
     }
 
     fun loadMyOrders() {
         viewModelScope.launch {
-            repository.listMyOrders().onSuccess { _orders.value = it }
+            _isLoading.value = true
+            _errorMessage.value = null
+            _isConnectionError.value = false
+            repository.listMyOrders()
+                .onSuccess { _orders.value = it }
+                .onFailure { e ->
+                    _errorMessage.value = HttpErrorParser.parse(e)
+                    _isConnectionError.value = HttpErrorParser.isConnectionError(e)
+                }
+            _isLoading.value = false
         }
     }
 
@@ -107,9 +169,13 @@ class OrderViewModel(
 
     fun updateStatus(id: Long, idEstado: Long, isAdmin: Boolean) {
         viewModelScope.launch {
-            repository.updateOrderStatus(id, idEstado).onSuccess {
-                if (isAdmin) loadAllOrders() else loadMyOrders()
-            }
+            repository.updateOrderStatus(id, idEstado)
+                .onSuccess {
+                    if (isAdmin) loadAllOrders() else loadMyOrders()
+                }
+                .onFailure { e ->
+                    _errorMessage.value = HttpErrorParser.parse(e)
+                }
         }
     }
 
@@ -124,15 +190,21 @@ class OrderViewModel(
 
     fun processSaleAndConfirm(id: Long) {
         viewModelScope.launch {
-            ventaRepository.processSale(VentaRequest(id, 5)).onSuccess {
-                loadAllOrders()
-            }
+            ventaRepository.processSale(VentaRequest(id, 5))
+                .onSuccess { loadAllOrders() }
+                .onFailure { e ->
+                    _errorMessage.value = HttpErrorParser.parse(e)
+                }
         }
     }
 
     fun cancelOrder(id: Long) {
         viewModelScope.launch {
-            repository.cancelOrder(id).onSuccess { loadMyOrders() }
+            repository.cancelOrder(id)
+                .onSuccess { loadMyOrders() }
+                .onFailure { e ->
+                    _errorMessage.value = HttpErrorParser.parse(e)
+                }
         }
     }
 
@@ -146,10 +218,10 @@ class OrderViewModel(
                         loadAllOrders()
                     }
                     .onFailure { e ->
-                        _assignError.value = e.message ?: "Error al asignar repartidor"
+                        _assignError.value = HttpErrorParser.parse(e)
                     }
             }.onFailure { e ->
-                _assignError.value = e.message ?: "Error al obtener envío del pedido"
+                _assignError.value = HttpErrorParser.parse(e)
             }
         }
     }
@@ -176,6 +248,11 @@ class OrderViewModel(
         _selectedEnvio.value = null
         _tracking.value = emptyList()
     }
+
+    fun clearError() {
+        _errorMessage.value = null
+        _isConnectionError.value = false
+    }
 }
 
 // --- Sales Management ViewModel ---
@@ -186,18 +263,40 @@ class VentaViewModel(private val repository: VentaRepository) : ViewModel() {
     private val _annulError = MutableStateFlow<String?>(null)
     val annulError: StateFlow<String?> = _annulError
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    private val _isConnectionError = MutableStateFlow(false)
+    val isConnectionError: StateFlow<Boolean> = _isConnectionError
+
     fun loadSales() {
         viewModelScope.launch {
-            repository.listSales().onSuccess { _sales.value = it }
+            _isLoading.value = true
+            _errorMessage.value = null
+            _isConnectionError.value = false
+            repository.listSales()
+                .onSuccess { _sales.value = it }
+                .onFailure { e ->
+                    _errorMessage.value = HttpErrorParser.parse(e)
+                    _isConnectionError.value = HttpErrorParser.isConnectionError(e)
+                }
+            _isLoading.value = false
         }
     }
 
     fun processSale(pedidoId: Long, metodoPagoId: Long, onSuccess: () -> Unit) {
         viewModelScope.launch {
-            repository.processSale(VentaRequest(pedidoId, metodoPagoId)).onSuccess {
-                loadSales()
-                onSuccess()
-            }
+            repository.processSale(VentaRequest(pedidoId, metodoPagoId))
+                .onSuccess {
+                    loadSales()
+                    onSuccess()
+                }
+                .onFailure { e ->
+                    _annulError.value = HttpErrorParser.parse(e)
+                }
         }
     }
 
@@ -209,13 +308,18 @@ class VentaViewModel(private val repository: VentaRepository) : ViewModel() {
                     loadSales()
                 }
                 .onFailure { error ->
-                    _annulError.value = error.message ?: "Error al anular venta"
+                    _annulError.value = HttpErrorParser.parse(error)
                 }
         }
     }
 
     fun clearAnnulError() {
         _annulError.value = null
+    }
+
+    fun clearError() {
+        _errorMessage.value = null
+        _isConnectionError.value = false
     }
 }
 
@@ -224,9 +328,32 @@ class DashboardViewModel(private val apiService: ApiService) : ViewModel() {
     private val _dashboardData = MutableStateFlow<DashboardResponse?>(null)
     val dashboardData: StateFlow<DashboardResponse?> = _dashboardData
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    private val _isConnectionError = MutableStateFlow(false)
+    val isConnectionError: StateFlow<Boolean> = _isConnectionError
+
     fun loadDashboard() {
         viewModelScope.launch {
-            try { _dashboardData.value = apiService.dashboard() } catch (e: Exception) {}
+            _isLoading.value = true
+            _errorMessage.value = null
+            _isConnectionError.value = false
+            try {
+                _dashboardData.value = apiService.dashboard()
+            } catch (e: Exception) {
+                _errorMessage.value = HttpErrorParser.parse(e)
+                _isConnectionError.value = HttpErrorParser.isConnectionError(e)
+            }
+            _isLoading.value = false
         }
+    }
+
+    fun clearError() {
+        _errorMessage.value = null
+        _isConnectionError.value = false
     }
 }

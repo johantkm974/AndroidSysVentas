@@ -1,5 +1,7 @@
 package com.example.myapplication.navigation
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,6 +33,9 @@ sealed class Screen(val route: String) {
         fun createRoute(id: Long) = "edit_product/$id"
     }
     object OrderList : Screen("order_list")
+    object OrderListFiltered : Screen("order_list_filtered/{filter}") {
+        fun createRoute(filter: String) = "order_list_filtered/$filter"
+    }
     object VentaList : Screen("venta_list")
     object Dashboard : Screen("dashboard")
     object CategoriaManagement : Screen("categoria_management")
@@ -65,7 +70,25 @@ fun NavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Login.route
+        startDestination = Screen.Login.route,
+        enterTransition = {
+            fadeIn(animationSpec = tween(300)) + slideInHorizontally(
+                animationSpec = tween(300),
+                initialOffsetX = { it / 4 }
+            )
+        },
+        exitTransition = {
+            fadeOut(animationSpec = tween(200))
+        },
+        popEnterTransition = {
+            fadeIn(animationSpec = tween(300)) + slideInHorizontally(
+                animationSpec = tween(300),
+                initialOffsetX = { -it / 4 }
+            )
+        },
+        popExitTransition = {
+            fadeOut(animationSpec = tween(200))
+        }
     ) {
         composable(Screen.Login.route) {
             LoginScreen(
@@ -121,6 +144,13 @@ fun NavGraph(
             }
             
             OrderListScreen(orderViewModel, navController, isAdminOrSeller)
+        }
+        composable(
+            route = Screen.OrderListFiltered.route,
+            arguments = listOf(navArgument("filter") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val filter = backStackEntry.arguments?.getString("filter") ?: ""
+            OrderListScreen(orderViewModel, navController, isAdminOrSeller = true, initialFilter = filter)
         }
         composable(Screen.VentaList.route) { VentaListScreen(ventaViewModel, navController) }
         composable(Screen.Dashboard.route) { AdminDashboardScreen(dashboardViewModel, navController) }

@@ -26,13 +26,13 @@ import com.example.myapplication.ui.viewmodel.OrderViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OrderListScreen(viewModel: OrderViewModel, navController: NavController, isAdminOrSeller: Boolean = false) {
+fun OrderListScreen(viewModel: OrderViewModel, navController: NavController, isAdminOrSeller: Boolean = false, initialFilter: String? = null) {
     val orders by viewModel.orders.collectAsState()
     val repartidores by viewModel.repartidores.collectAsState()
     val assignError by viewModel.assignError.collectAsState()
     var showRepartidorDialog by remember { mutableStateOf(false) }
     var selectedPedidoId by remember { mutableLongStateOf(0L) }
-    var selectedFilter by remember { mutableStateOf<String?>(null) }
+    var selectedFilter by remember { mutableStateOf<String?>(initialFilter) }
 
     val estados = listOf("PENDIENTE", "CONFIRMADO", "PREPARANDO", "ENVIADO", "ENTREGADO", "CANCELADO")
     val filteredOrders = if (selectedFilter == null) orders
