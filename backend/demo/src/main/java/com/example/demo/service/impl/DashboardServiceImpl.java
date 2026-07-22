@@ -31,7 +31,7 @@ public class DashboardServiceImpl implements DashboardService {
         long totalProductos = productoRepository.count();
         long totalUsuarios = usuarioRepository.count();
 
-        long totalPedidosPendientes = estadoPedidoRepository.findByNombre("PENDIENTE")
+        long totalPedidosPendientes = estadoPedidoRepository.findByNombre("CONFIRMADO")
                 .map(e -> (long) pedidoRepository.findByEstadoPedidoIdEstadoPedido(e.getIdEstadoPedido()).size())
                 .orElse(0L);
 

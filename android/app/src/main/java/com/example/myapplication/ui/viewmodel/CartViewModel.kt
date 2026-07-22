@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 
 data class CartItem(
     val product: ProductoResponse,
-    var quantity: Int
+    val quantity: Int
 )
 
 enum class PaymentMethod(val displayName: String, val icon: String) {
@@ -77,13 +77,40 @@ class CartViewModel(
 
     fun addToCart(product: ProductoResponse) {
         val currentList = _cartItems.value.toMutableList()
-        val existingItem = currentList.find { it.product.idProducto == product.idProducto }
-        if (existingItem != null) {
-            existingItem.quantity += 1
+        val index = currentList.indexOfFirst { it.product.idProducto == product.idProducto }
+        val currentQty = if (index >= 0) currentList[index].quantity else 0
+        if (currentQty >= product.stock) return
+        if (index >= 0) {
+            currentList[index] = currentList[index].copy(quantity = currentQty + 1)
         } else {
             currentList.add(CartItem(product, 1))
         }
         _cartItems.value = currentList
+    }
+
+    fun increaseQuantity(productId: Long) {
+        val currentList = _cartItems.value.toMutableList()
+        val index = currentList.indexOfFirst { it.product.idProducto == productId }
+        if (index >= 0) {
+            val item = currentList[index]
+            if (item.quantity >= item.product.stock) return
+            currentList[index] = item.copy(quantity = item.quantity + 1)
+            _cartItems.value = currentList
+        }
+    }
+
+    fun decreaseQuantity(productId: Long) {
+        val currentList = _cartItems.value.toMutableList()
+        val index = currentList.indexOfFirst { it.product.idProducto == productId }
+        if (index >= 0) {
+            val newQty = currentList[index].quantity - 1
+            if (newQty <= 0) {
+                _cartItems.value = currentList.filter { it.product.idProducto != productId }
+            } else {
+                currentList[index] = currentList[index].copy(quantity = newQty)
+                _cartItems.value = currentList
+            }
+        }
     }
 
     fun removeFromCart(productId: Long) {

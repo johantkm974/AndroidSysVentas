@@ -30,9 +30,11 @@ fun OrderListScreen(viewModel: OrderViewModel, navController: NavController, isA
     val orders by viewModel.orders.collectAsState()
     val repartidores by viewModel.repartidores.collectAsState()
     val assignError by viewModel.assignError.collectAsState()
+    val assignSuccess by viewModel.assignSuccess.collectAsState()
     var showRepartidorDialog by remember { mutableStateOf(false) }
     var selectedPedidoId by remember { mutableLongStateOf(0L) }
     var selectedFilter by remember { mutableStateOf<String?>(initialFilter) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val estados = listOf("PENDIENTE", "CONFIRMADO", "PREPARANDO", "ENVIADO", "ENTREGADO", "CANCELADO")
     val filteredOrders = if (selectedFilter == null) orders
@@ -44,6 +46,20 @@ fun OrderListScreen(viewModel: OrderViewModel, navController: NavController, isA
             viewModel.loadRepartidores()
         } else {
             viewModel.loadMyOrders()
+        }
+    }
+
+    LaunchedEffect(assignSuccess) {
+        assignSuccess?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Short)
+            viewModel.clearAssignSuccess()
+        }
+    }
+
+    LaunchedEffect(assignError) {
+        assignError?.let {
+            snackbarHostState.showSnackbar("Error: $it", duration = SnackbarDuration.Long)
+            viewModel.clearAssignError()
         }
     }
 
@@ -91,6 +107,7 @@ fun OrderListScreen(viewModel: OrderViewModel, navController: NavController, isA
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(if (isAdminOrSeller) "Gestión de Pedidos" else "Mis Pedidos") },

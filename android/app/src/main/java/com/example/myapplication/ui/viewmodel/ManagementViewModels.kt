@@ -114,6 +114,9 @@ class OrderViewModel(
     private val _assignError = MutableStateFlow<String?>(null)
     val assignError: StateFlow<String?> = _assignError
 
+    private val _assignSuccess = MutableStateFlow<String?>(null)
+    val assignSuccess: StateFlow<String?> = _assignSuccess
+
     private val _selectedEnvio = MutableStateFlow<EnvioResponse?>(null)
     val selectedEnvio: StateFlow<EnvioResponse?> = _selectedEnvio
 
@@ -211,10 +214,12 @@ class OrderViewModel(
     fun assignRepartidor(pedidoId: Long, repartidorId: Long) {
         viewModelScope.launch {
             _assignError.value = null
+            _assignSuccess.value = null
             val envioResult = deliveryRepository.getEnvioByPedido(pedidoId)
             envioResult.onSuccess { envio ->
                 deliveryRepository.assignRepartidor(envio.idEnvio, repartidorId)
                     .onSuccess {
+                        _assignSuccess.value = "Repartidor asignado con éxito"
                         loadAllOrders()
                     }
                     .onFailure { e ->
@@ -228,6 +233,10 @@ class OrderViewModel(
 
     fun clearAssignError() {
         _assignError.value = null
+    }
+
+    fun clearAssignSuccess() {
+        _assignSuccess.value = null
     }
 
     fun loadEnvioByPedido(pedidoId: Long) {

@@ -189,14 +189,14 @@ fun InventoryProductItem(product: ProductoResponse, onDelete: () -> Unit, onEdit
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .height(IntrinsicSize.Min)
+                .padding(12.dp),
         ) {
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(4.dp),
                 color = if (product.activo) MaterialTheme.colorScheme.primaryContainer
                         else MaterialTheme.colorScheme.errorContainer,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(100.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     if (!product.imagen.isNullOrBlank()) {
@@ -212,30 +212,28 @@ fun InventoryProductItem(product: ProductoResponse, onDelete: () -> Unit, onEdit
                             contentDescription = null,
                             tint = if (product.activo) MaterialTheme.colorScheme.primary
                                    else MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(40.dp)
                         )
                     }
                 }
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(product.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = if (product.activo) MaterialTheme.colorScheme.primaryContainer
-                                else MaterialTheme.colorScheme.errorContainer
-                    ) {
-                        Text(
-                            if (product.activo) "Activo" else "Inactivo",
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            color = if (product.activo) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.error
-                        )
-                    }
+                Text(product.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = if (product.activo) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.errorContainer
+                ) {
+                    Text(
+                        if (product.activo) "Activo" else "Inactivo",
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                        color = if (product.activo) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.error
+                    )
                 }
+                Spacer(modifier = Modifier.height(4.dp))
                 Text("Código: ${product.codigo}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row {
                     Text("Stock: ${product.stock}", style = MaterialTheme.typography.bodySmall,
@@ -244,19 +242,23 @@ fun InventoryProductItem(product: ProductoResponse, onDelete: () -> Unit, onEdit
                     Spacer(modifier = Modifier.width(12.dp))
                     Text("S/ ${product.precioVenta}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 }
-            }
-            Row {
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
-                }
-                if (product.activo) {
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, contentDescription = "Desactivar", tint = MaterialTheme.colorScheme.error)
+                Spacer(modifier = Modifier.weight(1f))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
                     }
-                } else {
-                    onDeletePermanently?.let {
-                        IconButton(onClick = it) {
-                            Icon(Icons.Default.Delete, contentDescription = "Eliminar permanentemente", tint = MaterialTheme.colorScheme.error)
+                    if (product.activo) {
+                        IconButton(onClick = onDelete) {
+                            Icon(Icons.Default.Delete, contentDescription = "Desactivar", tint = MaterialTheme.colorScheme.error)
+                        }
+                    } else {
+                        onDeletePermanently?.let {
+                            IconButton(onClick = it) {
+                                Icon(Icons.Default.Delete, contentDescription = "Eliminar permanentemente", tint = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
                 }

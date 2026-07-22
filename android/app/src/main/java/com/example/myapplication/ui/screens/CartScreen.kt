@@ -6,8 +6,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -222,13 +225,13 @@ fun CartScreen(viewModel: CartViewModel, navController: NavController) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Surface(
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(4.dp),
                                 color = MaterialTheme.colorScheme.primaryContainer,
-                                modifier = Modifier.size(56.dp)
+                                modifier = Modifier.size(64.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     if (!item.product.imagen.isNullOrBlank()) {
@@ -240,8 +243,8 @@ fun CartScreen(viewModel: CartViewModel, navController: NavController) {
                                         )
                                     } else {
                                         Text(
-                                            "${item.quantity}",
-                                            style = MaterialTheme.typography.titleMedium,
+                                            item.product.nombre.take(2).uppercase(),
+                                            style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary
                                         )
@@ -250,8 +253,32 @@ fun CartScreen(viewModel: CartViewModel, navController: NavController) {
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(item.product.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                Text("S/ ${item.product.precioVenta} x ${item.quantity}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(item.product.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("S/ ${item.product.precioVenta} c/u", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    FilledIconButton(
+                                        onClick = { viewModel.decreaseQuantity(item.product.idProducto) },
+                                        modifier = Modifier.size(32.dp),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Remove, contentDescription = "Reducir", modifier = Modifier.size(16.dp))
+                                    }
+                                    Text(
+                                        "${item.quantity}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 12.dp)
+                                    )
+                                    FilledIconButton(
+                                        onClick = { viewModel.increaseQuantity(item.product.idProducto) },
+                                        modifier = Modifier.size(32.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        enabled = item.quantity < item.product.stock
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = "Aumentar", modifier = Modifier.size(16.dp))
+                                    }
+                                }
                                 Text("Subtotal: S/ ${item.product.precioVenta * item.quantity}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                             }
                             IconButton(onClick = { viewModel.removeFromCart(item.product.idProducto) }) {

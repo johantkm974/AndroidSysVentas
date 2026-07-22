@@ -530,10 +530,10 @@ fun AdminDashboardScreen(viewModel: DashboardViewModel, navController: NavContro
 
                     DashboardActionCard(
                         icon = Icons.Default.PendingActions,
-                        title = "Pedidos Pendientes",
-                        subtitle = "${resumen.totalPedidosPendientes} pedidos por procesar",
+                        title = "Pedidos por Procesar",
+                        subtitle = "${resumen.totalPedidosPendientes} pedidos por confirmar",
                         color = Color(0xFFFFA000),
-                        onClick = { navController.navigate(Screen.OrderListFiltered.createRoute("PENDIENTE")) }
+                        onClick = { navController.navigate(Screen.OrderListFiltered.createRoute("CONFIRMADO")) }
                     )
                     DashboardActionCard(
                         icon = Icons.Default.LocalShipping,
@@ -555,6 +555,13 @@ fun AdminDashboardScreen(viewModel: DashboardViewModel, navController: NavContro
                         subtitle = "Administrar usuarios",
                         color = Color(0xFF00838F),
                         onClick = { navController.navigate(Screen.UserManagement.route) }
+                    )
+                    DashboardActionCard(
+                        icon = Icons.Default.Receipt,
+                        title = "Gestión de Ventas",
+                        subtitle = "Administrar ventas realizadas",
+                        color = Color(0xFF1565C0),
+                        onClick = { navController.navigate(Screen.VentaList.route) }
                     )
 
                     if (data!!.productosStockBajo.isNotEmpty()) {
