@@ -116,6 +116,7 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
             repository.deleteProduct(id)
                 .onSuccess { loadAllProducts() }
                 .onFailure { error ->
+                    _createError.value = null
                     _createError.value = HttpErrorParser.parse(error)
                 }
         }
@@ -126,6 +127,7 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
             repository.deleteProductPermanently(id)
                 .onSuccess { loadAllProducts() }
                 .onFailure { error ->
+                    _createError.value = null
                     _createError.value = HttpErrorParser.parse(error)
                 }
         }
