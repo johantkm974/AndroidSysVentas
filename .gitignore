@@ -55,3 +55,20 @@ $RECYCLE.BIN/
 
 # macOS (por si colaboras con alguien que use Mac)
 .DS_Store
+
+# =========================
+# 5. Variables de Entorno y Secrets
+# =========================
+# Archivo .env local (contiene credenciales reales)
+.env
+.env.local
+.env.production
+
+# application.properties con valores hardcodeados (respaldo local)
+application.properties.bak
+
+# =========================
+# 6. Node / misc
+# =========================
+node_modules/
+npm-debug.log*

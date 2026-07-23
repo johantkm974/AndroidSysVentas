@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: sistema-electronicos-api
+    runtime: java
+    buildCommand: cd backend/demo && ./mvnw clean package -DskipTests
+    startCommand: java -jar backend/demo/target/demo-0.0.1-SNAPSHOT.jar --server.port=$PORT
+    envVars:
+      - key: DB_URL
+        fromDatabase:
+          name: sistema-electronicos-db
+          property: connectionString
+      - key: DB_USERNAME
+        fromDatabase:
+          name: sistema-electronicos-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: sistema-electronicos-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: "86400000"
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
